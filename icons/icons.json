@@ -1,0 +1,23 @@
+{
+	"aggregate": 	{"name": "aggregate", 	"icon": "icons/aggregate.png"},
+	"aht": 			{"name": "aht", 		"icon": "icons/aht.png"},
+	"ahtsen":		{"name": "ahtsen", 		"icon": "icons/ahtsen.png"},
+	"bmp280":		{"name": "bmp280", 		"icon": "icons/bmpsen.png"},
+	"dht22": 		{"name": "dht22", 		"icon": "icons/dht22.png"},
+	"dht": 			{"name": "dht", 		"icon": "icons/dht.png"},
+	"gauge1":		{"name": "gauge1",		"icon":	"icons/gauge1.png"},
+	"gauge2":		{"name": "gauge2",		"icon":	"icons/gauge2.png"},
+	"gauge3":		{"name": "gauge3",		"icon":	"icons/gauge3.png"},
+	"humidity": 	{"name": "humidity",	"icon": "icons/humidity.png"},
+	"Raspberry Pi4":{"name": "Raspberry Pi4","icon": "icons/pi4.png"},
+	"pilogo":		{"name": "pilogo",		"icon": "icons/pilogo.png"},
+	"pinet":		{"name": "pinet",		"icon": "icons/pinet.png"},
+	"pizero":		{"name": "pizero",		"icon":	"icons/pizero.png"},
+	"pressure": 	{"name": "pressure", 	"icon": "icons/pressure.png"},
+	"raspberrypi":  {"name": "raspberrypi",	"icon": "icons/raspberrypi.png"},
+	"si": 			{"name": "si", 			"icon": "icons/si.png"},
+	"sisen": 		{"name": "sisen", 		"icon": "icons/sisen.png"},
+	"system": 		{"name": "system", 		"icon": "icons/system.png"},
+	"thermometer": 	{"name": "thermometer", "icon": "icons/thermometer.png"},
+	"weather": 		{"name": "weather", 	"icon":	"icons/weather.png"}
+}
