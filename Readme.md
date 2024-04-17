@@ -4,8 +4,7 @@ This is a demonstration of using my SensorFS and RestAPI to collect and display 
 *Warning* I suck at Python GTK programming! 
 
 ## Caveat Emptor
-This is demonstration code and not really written for distribution, nor, will it be, this is part of 
-a proof of concept for my [SensorFS Proposal](https://github.com/nicciniamh/sensorfs).
+This is demonstration code and not really written for distribution, nor, will it be, this is part of a proof of concept for my [SensorFS Proposal](https://github.com/nicciniamh/sensorfs).
 
 I have tested this on my Raspberry Pi4 but mainly run this on macOS Sonoma. This likely will not 
 run on your system without teaking paths and creating ramdisks. 

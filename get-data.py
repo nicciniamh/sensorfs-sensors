@@ -5,22 +5,13 @@ import json
 import time
 import argparse
 import psutil
-sys.path.append(os.path.expanduser('~/lib'))
-prog_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-sys.path.append(prog_dir)
-os.chdir(prog_dir)
-from dflib import rest
-from dflib.debug import *
-pid_file = '/tmp/get-data.pid'
-data_path = '/Volumes/RamDisk/sensordata'
 
-def is_running():
+def is_running(pid_file):
 	'''
 	determine if the daemon is running.
 	check for an exisiting pid file, check the pid. 
 	if the pid is running return true, otherwise false.
 	'''
-	global pid_file
 	debug("Checking for running process")
 	if os.path.exists(pid_file):
 		debug("pid_file exists")
@@ -34,11 +25,10 @@ def is_running():
 			pass
 	return False
 
-def startup():
+def startup(pid_file):
 	'''
 	Check if daemon is running if not gork and exit else just exit
 	'''
-	global pid_file
 	if not get_debug():
 		if is_running():
 			log(f'daemon already running')
@@ -76,7 +66,7 @@ def get_config():
 			return  json.load(f)
 	except:
 		return None
-def main(base_dir):
+def main(base_dir,pid_file):
 	'''
 	loop through defined sensors and write data to {base_dir}/{host}-{sensor}.json
 	sleep for poll interval miliseconds
@@ -120,15 +110,29 @@ def main(base_dir):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
 			prog=f"get-data",
-			description="Sensor background data collection via SensorFS RestAPI",
+			description="daemon to collect data via sensorfs",
 			epilog="A SensorFS RestAPI Example. See https://github.com/nicciniamh/sensorfs"
 		)
 	parser.add_argument('-d','--debug',action='store_true',default=False,help='turn on copious debugging messages')
+	parser.add_argument('-rp','--run-path',type=str,default=None,help='run program in path',metavar="path")
 	args = parser.parse_args()
+	if args.run_path:
+		prog_dir = args.run_path
+	os.chdir(prog_dir)
+	sys.path.append(os.path.expanduser('~/lib'))
+	prog_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+	sys.path.append(prog_dir)
+
+	from dflib import rest
+	from dflib.debug import *
+	
+	pid_file = '/tmp/get-data.pid'
+	data_path = '/Volumes/RamDisk/sensordata'
+
 	set_debug(args.debug)
 	try:
-		startup()
-		main(data_path)
+		startup(pid_file)
+		main(data_path,pid_file)
 	except KeyboardInterrupt:
 		pass
 	except Exception as e:
