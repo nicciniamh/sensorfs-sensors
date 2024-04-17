@@ -12,8 +12,14 @@ os.chdir(prog_dir)
 from dflib import rest
 from dflib.debug import *
 pid_file = '/tmp/get-data.pid'
+data_path = '/Volumes/RamDisk/sensordata'
 
 def is_running():
+	'''
+	determine if the daemon is running.
+	check for an exisiting pid file, check the pid. 
+	if the pid is running return true, otherwise false.
+	'''
 	global pid_file
 	debug("Checking for running process")
 	if os.path.exists(pid_file):
@@ -29,6 +35,9 @@ def is_running():
 	return False
 
 def startup():
+	'''
+	Check if daemon is running if not gork and exit else just exit
+	'''
 	global pid_file
 	if not get_debug():
 		if is_running():
@@ -47,6 +56,9 @@ def startup():
 		debug("Debug mode no daemon")
 
 def log(*args):
+	'''
+	Write to logfile also debug if debug is enabled
+	'''
 	tfmt = '%m-%d-%Y %H:%M'
 	with open("/tmp/get-data.log","a") as f:
 		now = time.time()
@@ -56,12 +68,19 @@ def log(*args):
 		debug(*args)
 
 def get_config():
+	'''
+	read common config file 
+	'''
 	try:
 		with open('sensors.json') as f:
 			return  json.load(f)
 	except:
 		return None
 def main(base_dir):
+	'''
+	loop through defined sensors and write data to {base_dir}/{host}-{sensor}.json
+	sleep for poll interval miliseconds
+	'''
 	config = None
 	while not config:
 		config = get_config()
@@ -109,7 +128,7 @@ if __name__ == "__main__":
 	set_debug(args.debug)
 	try:
 		startup()
-		main('/Volumes/RamDisk/sensordata')
+		main(data_path)
 	except KeyboardInterrupt:
 		pass
 	except Exception as e:
