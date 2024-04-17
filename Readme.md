@@ -1,3 +1,4 @@
+![Sensors.png](Sensors.png)
 # Sensors
 This is a demonstration of using my SensorFS and RestAPI to collect and display data using Gtk 
 *Warning* I suck at Python GTK programming! 

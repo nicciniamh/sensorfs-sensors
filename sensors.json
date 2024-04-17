@@ -7,8 +7,8 @@
         "::main::": {
             "active": true,
             "pos": [
-                325,
-                108
+                122,
+                54
             ],
             "size": [
                 840,
@@ -107,8 +107,8 @@
             "sensor": "aggregate",
             "active": true,
             "pos": [
-                1280,
-                312
+                1013,
+                316
             ],
             "icon": "icons/aggregate.png"
         },
@@ -117,8 +117,8 @@
             "sensor": "aggregate",
             "active": true,
             "pos": [
-                1212,
-                31
+                1012,
+                61
             ],
             "icon": "icons/aggregate.png"
         },
@@ -127,8 +127,8 @@
             "sensor": "dht22",
             "icon": "icons/dht.png",
             "pos": [
-                1331,
-                597
+                1030,
+                590
             ],
             "active": true
         },
@@ -136,8 +136,8 @@
             "host": "pi4",
             "sensor": "cpu_usage",
             "pos": [
-                158,
-                684
+                127,
+                606
             ],
             "active": true,
             "icon": "icons/raspberrypi.png"
