@@ -13,6 +13,8 @@ sys.path.append(os.path.expanduser('~/lib'))
 prog_dir = os.path.dirname(os.path.realpath(sys.argv[0])) 
 sys.path.append(prog_dir)
 
+data_dir = '/Volumes/RamDisk/sensordata'
+
 from dflib import widgets, rest
 from dflib.debug import debug
 
@@ -51,7 +53,7 @@ class PsuedoSensor:
 	def __init__(self,**kwargs):
 		self.sensor = None
 		self.host = None
-		self.base_path = '/Volumes/RamDisk/sensordata'
+		self.base_path = data_path
 		for k,v in kwargs.items():
 			setattr(self,k,v)
 
@@ -90,6 +92,7 @@ class SenDetail(Gtk.Window):
 		move_callback - to be called when the window is moved (for saving position)
 	'''
 	def __init__(self,*args,**kwargs):
+		self._use_rest = False
 		self.config = None
 		self.host = None
 		self.sensor_name = None
@@ -121,8 +124,10 @@ class SenDetail(Gtk.Window):
 
 		debug(self.sensor_name,'interval', self.config['poll_interval'])
 		self.server = self.config['server']
-		#self.sensor = rest.RestClient(server=self.server,sensor=self.sensor_name,host=self.host)
-		self.sensor = PsuedoSensor(server=self.server,sensor=self.sensor_name,host=self.host)
+		if self._use_rest:
+			self.sensor = rest.RestClient(server=self.server,sensor=self.sensor_name,host=self.host)
+		else:
+			self.sensor = PsuedoSensor(server=self.server,sensor=self.sensor_name,host=self.host)
 		Gtk.Window.__init__(self, title=self.title)
 		self.connect("delete-event", self.stopit)
 		self.keepgoing = True
