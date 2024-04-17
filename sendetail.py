@@ -13,7 +13,7 @@ sys.path.append(os.path.expanduser('~/lib'))
 prog_dir = os.path.dirname(os.path.realpath(sys.argv[0])) 
 sys.path.append(prog_dir)
 
-data_dir = '/Volumes/RamDisk/sensordata'
+data_path = '/Volumes/RamDisk/sensordata'
 
 from dflib import widgets, rest
 from dflib.debug import debug
