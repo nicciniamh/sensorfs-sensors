@@ -7,8 +7,8 @@
         "::main::": {
             "active": true,
             "pos": [
-                280,
-                25
+                325,
+                108
             ],
             "size": [
                 840,
@@ -136,8 +136,8 @@
             "host": "pi4",
             "sensor": "cpu_usage",
             "pos": [
-                154,
-                581
+                158,
+                684
             ],
             "active": true,
             "icon": "icons/raspberrypi.png"
