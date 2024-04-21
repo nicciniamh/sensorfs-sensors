@@ -36,6 +36,9 @@ The data source is from network mounted filesystems. On macOS the path used is ~
 <s>This program is meant to run from it's own directory. See prog_dir in sensors.py and get-data.py. </s>
 
 
+## Bugs
+Probablt many. The more annoying one is why the chart windows don't restore to their original position. 
+
 # Intellectual Property
 I have glomed some icons from the net - I do not mean to rip anyone off and I'm not making money from this. (I'm retired with a disabilty)
 
