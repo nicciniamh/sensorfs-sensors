@@ -694,16 +694,16 @@
                     352
                 ],
                 "pos": [
-                    924,
-                    449
+                    921,
+                    83
                 ],
                 "interval": 2000.0,
-                "background_color": "#1d2f92",
+                "background_color": "#162471",
                 "legend_color": "#9a9996",
                 "line_color": "#c0bfbc",
                 "line_width": 2.0,
                 "min_value": 74.0,
-                "max_value": 75.0,
+                "max_value": 76.0,
                 "active": true,
                 "keyranges": {
                     "tempc": [
@@ -712,7 +712,7 @@
                     ],
                     "temp": [
                         74.0,
-                        75.0
+                        76.0
                     ],
                     "humidity": [
                         30.0,
