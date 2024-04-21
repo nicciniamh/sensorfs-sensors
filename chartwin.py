@@ -11,8 +11,8 @@ import pprint
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, GdkPixbuf
 
-prog_dir = os.path.expanduser('/Users/nicci/sensors-gui')
-sys.path.append(os.path.expanduser('/Users/nicci/lib'))
+prog_dir = os.path.expanduser('~/sensors-gui')
+sys.path.append(os.path.expanduser('~/lib'))
 sys.path.append(prog_dir)
 os.chdir(prog_dir)
 
