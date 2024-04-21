@@ -7,8 +7,8 @@
         "::main::": {
             "active": true,
             "pos": [
-                25,
-                25
+                24,
+                31
             ],
             "size": [
                 888,
@@ -302,7 +302,7 @@
                 471,
                 820
             ],
-            "active": true,
+            "active": false,
             "icon": "icons/ahtsen.png",
             "chart": {
                 "size": [
@@ -421,8 +421,8 @@
                     352
                 ],
                 "pos": [
-                    8,
-                    461
+                    440,
+                    594
                 ],
                 "keyranges": {
                     "tempc": [
@@ -431,7 +431,7 @@
                     ],
                     "temp": [
                         50.0,
-                        95.0
+                        80.0
                     ],
                     "humidity": [
                         30,
@@ -490,7 +490,7 @@
                 "legend_color": "#5e5c64",
                 "line_color": "#000000",
                 "min_value": 50.0,
-                "max_value": 95.0,
+                "max_value": 80.0,
                 "active": false,
                 "key": "temp",
                 "interval": 1000,
@@ -593,10 +593,10 @@
             "host": "pi3",
             "icon": "icons/ahtsen.png",
             "pos": [
-                464,
-                564
+                919,
+                817
             ],
-            "active": true,
+            "active": false,
             "chart": {
                 "size": [
                     496,
@@ -694,16 +694,16 @@
                     352
                 ],
                 "pos": [
-                    914,
-                    501
+                    924,
+                    449
                 ],
                 "interval": 2000.0,
                 "background_color": "#1d2f92",
                 "legend_color": "#9a9996",
                 "line_color": "#c0bfbc",
                 "line_width": 2.0,
-                "min_value": 65.0,
-                "max_value": 80.0,
+                "min_value": 74.0,
+                "max_value": 75.0,
                 "active": true,
                 "keyranges": {
                     "tempc": [
@@ -711,8 +711,8 @@
                         35
                     ],
                     "temp": [
-                        65.0,
-                        80.0
+                        74.0,
+                        75.0
                     ],
                     "humidity": [
                         30.0,
