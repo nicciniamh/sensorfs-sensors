@@ -37,29 +37,30 @@ class SensorsConfig(Gtk.Window):
 		self.connect('delete-event',self.on_wm_delete_event)
 		self.connect('destroy',self.on_complete_handler)
 		box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-
-		sbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		sbox.pack_start(Gtk.Label(label="Server"),True,True,10)
-		self.server_input = Gtk.Entry()
-		self.server_input.set_text(self.config['server'])
-		self.server_input.connect('changed',self.set_modified)
-		self.server_input.connect('preedit-changed',self.set_modified)
-		sbox.pack_start(self.server_input,True,True,0)
-		box.pack_start(sbox,True,True,10)
-		sbbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		sblabel = Gtk.Label()
-		sblabel.set_markup('Poll Interval\n<small><i>Under 500ms may\ncause significant server load</i></small>')
-		if 'poll_interval' in self.config:
-			poll_interval = self.config['poll_interval']
-		else:
-			poll_interval = 300
-		self.set_interval = Gtk.SpinButton.new_with_range(100,1500,50)
-		self.set_interval.set_value(poll_interval)
-		self.set_interval.connect('changed',self.set_modified)
-		sbbox.pack_start(sblabel,True,True,10)
-		sbbox.pack_start(self.set_interval,True,True,10)
-		sbbox.pack_start(Gtk.Label(label="ms."),True,True,10)
-		box.pack_start(sbbox,True,True,10)
+		if None:
+			sbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+			sbox.pack_start(Gtk.Label(label="Server"),True,True,10)
+			self.server_input = Gtk.Entry()
+			self.server_input.set_text(self.config['server'])
+			self.server_input.connect('changed',self.set_modified)
+			self.server_input.connect('preedit-changed',self.set_modified)
+			sbox.pack_start(self.server_input,True,True,0)
+			box.pack_start(sbox,True,True,10)
+			sbbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+			sblabel = Gtk.Label()
+			sblabel.set_markup('Poll Interval\n<small><i>Under 500ms may\ncause significant server load</i></small>')
+			if 'poll_interval' in self.config:
+				poll_interval = self.config['poll_interval']
+			else:
+				poll_interval = 300
+			self.set_interval = Gtk.SpinButton.new_with_range(100,1500,50)
+			self.set_interval.set_value(poll_interval)
+			self.set_interval.connect('changed',self.set_modified)
+			sbbox.pack_start(sblabel,True,True,10)
+			sbbox.pack_start(self.set_interval,True,True,10)
+			sbbox.pack_start(Gtk.Label(label="ms."),True,True,10)
+			box.pack_start(sbbox,True,True,10)
+		
 		if 'dark_mode' in self.config:
 			dark_mode = self.config['dark_mode']
 		else:
@@ -110,15 +111,16 @@ class SensorsConfig(Gtk.Window):
 		to caller to save config '''
 		debug(f'ok_clicked')
 		modified = False
-		server = self.server_input.get_text()
-		if self.config['server'] != server:
-			self.config['server'] = server
-		pi = self.set_interval.get_value()
-		if self.config['poll_interval'] != pi:
-			debug(f"poll interval changed to {pi}")
-			self.config['poll_interval'] = pi
-		else:
-			debug(f"Poll Interval is unchanged")
+		if None:
+			server = self.server_input.get_text()
+			if self.config['server'] != server:
+				self.config['server'] = server
+			pi = self.set_interval.get_value()
+			if self.config['poll_interval'] != pi:
+				debug(f"poll interval changed to {pi}")
+				self.config['poll_interval'] = pi
+			else:
+				debug(f"Poll Interval is unchanged")
 		old_dark = self.config['dark_mode']
 		new_dark = self.dark_entry.state
 		if new_dark != old_dark:
