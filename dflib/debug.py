@@ -9,6 +9,14 @@ import os
 import pprint
 
 debug_flag = False
+log_path = False
+
+def set_log_file(path):
+	global debug_flag
+	global log_path
+	log_path = path
+	with open(path,'w') as f:
+		pass
 
 def set_debug(flag):
 	''' turn debugging on and off with boolean '''
@@ -39,6 +47,11 @@ def _output(caller, tag,*args):
 	'''
 	colorize and print output
 	'''
+	global log_path
+	if log_path:
+		logfile = log_path
+		with open(logfile,'a') as f:
+			print(f'{tag} - \033[1;36;40m{caller}\033[0m :\033[1;37;40m',*args, '\033[0m',file=f)
 	print(f'{tag} - \033[1;36;40m{caller}\033[0m :\033[1;37;40m',*args, '\033[0m',file=sys.stderr)
 
 def debug(*args):

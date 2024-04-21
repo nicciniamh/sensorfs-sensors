@@ -1,9 +1,11 @@
 import os
 import gi
+from enum import Enum
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf
 
 from dflib.debug import debug
+from dflib import IconState	
 
 class IconWindow(Gtk.ScrolledWindow):
 	def __init__(self, **kwargs):
@@ -21,12 +23,13 @@ class IconWindow(Gtk.ScrolledWindow):
 		self.sort_column = 1
 		self.activate_on_single_click = False
 		self.active_windows = None
+		self.active_charts = None
 		self.config = None
 		for k, v in kwargs.items():
 			if k in [   'icon_dict', 'context_menu',
 						'activate_callback', 'menu_callback', 'add_item_callback',
 						'info_menu','icon_menu','info_menu','activate_on_single_click',
-						'active_windows','config'
+						'active_windows','active_charts','config'
 					]:
 				setattr(self, k, v)
 			else:
@@ -81,25 +84,20 @@ class IconWindow(Gtk.ScrolledWindow):
 		iter = self.icon_store.get_iter(tree_path)
 		self.icon_store.emit('row-changed',tree_path, iter)
 
-	def activate_icon(self,name):
+	def activate_icon(self,name,active):
 		index = self._get_icon_store_by_name(name)
 		if type(index) is int:
 			row = self.icon_store[index]
-			active_icon = self.pixmap[name]['active']
+			active_icon = self.pixmap[name]['images'][active]
 			icon_name = self.pixmap[name]['icon_name']
-			debug(f"""
-			activating: {name}
-			icon_name: {icon_name}
-			setting active: {active_icon}
-			active set: {self.pixmap[name]['active']}
-			inactive set: {self.pixmap[name]['inactive']}
-			""")
 			row[0] = active_icon
 			self._signal_row_change(index)
 		else:
 			debug('bad index',type(index),index)
 	
-	def deactivate_icon(self,name):
+	def deactivate_icon(self,name,active):
+		self.activate_icon(name,active)
+		return
 		index = self._get_icon_store_by_name(name)
 		if type(index) is int:
 			row = self.icon_store[index]
@@ -133,19 +131,19 @@ class IconWindow(Gtk.ScrolledWindow):
 			iaipath = value['icon']
 			aipath,ext = os.path.splitext(iaipath)
 			aipath = f'{aipath}-active{ext}'
-			#icon_pixbuf_active = GdkPixbuf.Pixbuf.new_from_file(aipath)
-			#icon_pixbuf_inactive = GdkPixbuf.Pixbuf.new_from_file(value["icon"])
-			(icon_pixbuf_inactive,icon_pixbuf_active) = \
-				self.get_icon_image(value['icon'])
+
+			icon_images = 	self.get_icon_image(value['icon'])
 			self.pixmap[value['name']] = {
 				"icon_name": value['icon'],
-				"active": icon_pixbuf_active, 
-				"inactive": icon_pixbuf_inactive}
+				'images': icon_images}
 
+			itype = 0
 			if self.active_windows and value['name'] in self.active_windows:
-				pimage = icon_pixbuf_active
-			else:
-				pimage = icon_pixbuf_inactive
+				itype |= 1
+			if self.active_charts and value['name'] in self.active_charts:
+				itype |= 2
+
+			pimage = icon_images[itype]
 			if 'type' in value:
 				self.icon_store.append([pimage, value["name"], value['type']])
 			else:
@@ -250,6 +248,8 @@ class IconWindow(Gtk.ScrolledWindow):
 				show_item.connect('activate',self.on_menu_show,path)
 
 		menu = Gtk.Menu()
+		chart_item = Gtk.MenuItem(label="Show Chart")
+		chart_item.connect('activate',self.on_show_chart,path)
 		edit_item = Gtk.MenuItem(label="Edit")
 		remove_item = Gtk.MenuItem(label="Remove")
 		edit_item.connect("activate", self.on_icon_edit_activate, path)
@@ -261,6 +261,7 @@ class IconWindow(Gtk.ScrolledWindow):
 		if show_item:
 			menu.append(show_item)
 		menu.append(detail_item)
+		menu.append(chart_item)
 		menu.append(edit_item)
 		menu.append(remove_item)
 		if self.info_menu:
@@ -288,7 +289,11 @@ class IconWindow(Gtk.ScrolledWindow):
 		item = path[0]
 		name = self.icon_store[item][1]
 
-	
+	def on_show_chart(self,widget,path):
+		item = path[0]
+		name = self.icon_store[item][1]
+		self.menu_callback('chart',name)
+
 	def on_info_item_activate(self, widget, path):
 		if not self.info_menu:
 			return
@@ -365,7 +370,11 @@ class IconWindow(Gtk.ScrolledWindow):
 
 	def on_icon_double_click(self, icon_view, path):
 		name = self.icon_store[path][1]
-		self.activate_icon(name)
+		if self.active_charts and name in self.active_charts:
+			atype=3
+		else:
+			atype=1
+		self.activate_icon(name,atype)
 		debug(name)
 		if callable(self.activate_callback):
 			self.activate_callback(name)
@@ -376,37 +385,41 @@ class IconWindow(Gtk.ScrolledWindow):
 		applying an image with the active badge to the source. Return both GdkPixbufs
 		'''
 		# Load images
-		image2_path = os.path.join(os.path.dirname(image1_path),"active_badge.png")
+
 		image1 = GdkPixbuf.Pixbuf.new_from_file(image1_path)
-		image2 = GdkPixbuf.Pixbuf.new_from_file(image2_path)
+		badge_images = [image1]
+		for active in ['badge','chart','both']:
+			ipath = os.path.join(os.path.dirname(image1_path),f"active_{active}.png")
+			image2 = GdkPixbuf.Pixbuf.new_from_file(ipath)
 
-		# Scale image1 to the desired dimensions
-		scaled_image1 = image1.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
+			# Scale image1 to the desired dimensions
+			scaled_image1 = image1.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
 
-		# Create a new transparent image to composite onto
-		composite_image = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 64, 64)
-		composite_image.fill(0x000000)  # Fill with black
+			# Create a new transparent image to composite onto
+			composite_image = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 64, 64)
+			composite_image.fill(0x000000)  # Fill with black
 
-		# Draw scaled_image1 onto the composite image
-		scaled_image1.copy_area(0, 0, 64, 64, composite_image, 0, 0)
+			# Draw scaled_image1 onto the composite image
+			scaled_image1.copy_area(0, 0, 64, 64, composite_image, 0, 0)
 
-		# Calculate position to center image2 on composite_image
-		x_offset = (64 - image2.get_width()) // 2
-		y_offset = (64 - image2.get_height()) // 2
+			# Calculate position to center image2 on composite_image
+			x_offset = (64 - image2.get_width()) // 2
+			y_offset = (64 - image2.get_height()) // 2
 
-		# Draw image2 onto the composite image
-		image2.composite(
-			composite_image,
-			x_offset,
-			y_offset,
-			image2.get_width(),
-			image2.get_height(),
-			x_offset,
-			y_offset,
-			1,
-			1,
-			GdkPixbuf.InterpType.BILINEAR,
-			255,
-		)
-		return (scaled_image1, composite_image)
+			# Draw image2 onto the composite image
+			image2.composite(
+				composite_image,
+				x_offset,
+				y_offset,
+				image2.get_width(),
+				image2.get_height(),
+				x_offset,
+				y_offset,
+				1,
+				1,
+				GdkPixbuf.InterpType.BILINEAR,
+				255,
+			)
+			badge_images.append(composite_image)
+		return (badge_images)
 

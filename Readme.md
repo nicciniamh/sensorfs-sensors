@@ -10,16 +10,11 @@ I have tested this on my Raspberry Pi4 but mainly run this on macOS Sonoma. This
 run on your system without teaking paths and creating ramdisks. 
 
 ## Overview
-There are two components: First is get-data.py which forks and runs in background. If the daemon isn't 
-started when the main app runs, the daemon is started automatically.
-
-The main program presents a window with icons representing each defined sensors. Buttons on a toolbar 
-allow app and sensor configuration. (changes to this will be reflected on the daemon)
+The main program presents a window with icons representing each defined sensors. Buttons on a toolbar allow app and sensor configuration. (changes to this will be reflected on the daemon)
 
 Double-clicking an icon brings up a detail window. If there is already a detail window open, that window is raised.
 
 Icons can be sorted by name or type in ascending or descending direction. 
-
 
 ## Installation
 Well, this is the fun bit isn't it. 
@@ -33,3 +28,7 @@ The daemon writes data anywhere from 200ms to 2000ms. This can fatique solid sta
 This program is meant to run from it's own directory. See prog_dir in sensors.py and get-data.py. 
 
 
+# Intellectual Property
+I have glomed some icons from the net - I do not mean to rip anyone off and I'm not making money from this. (I'm retired with a disabilty)
+
+If I am using your property, please let me know via GitHub. 

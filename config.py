@@ -71,7 +71,8 @@ class SensorsConfig(Gtk.Window):
 				caption = 'GUI Mode',
 				before = True
 			)
-		box.pack_start(self.dark_entry,True,True,10)
+		if os.uname()[0] == 'Darwin':
+			box.pack_start(self.dark_entry,True,True,10)
 		okcbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 		okbutton = Gtk.Button(label="Ok")
 		okbutton.connect('clicked',self.on_ok_clicked)

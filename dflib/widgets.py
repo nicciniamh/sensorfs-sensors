@@ -210,7 +210,7 @@ class Toggle(Gtk.Box):
 			if k in ['label_text','orientation','caption','before','state','callback']:
 				setattr(self,k,v)
 
-		if not self.caption or not self.label_text:
+		if self.caption == None or not self.label_text:
 			raise ValueError('label_text and caption must be specified.')
 
 		self.state_text = self._buttonText()
@@ -257,7 +257,7 @@ class Toggle(Gtk.Box):
 
 	def _on_button_toggled(self,button):
 		self.state = button.get_active()
-		debug(f'button state is ',self.state)
+		debug(f'button state is ',self.state,'callback',self.callback)
 		self.state_text =self._buttonText()
 		self.change_button()
 		if callable(self.callback):

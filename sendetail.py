@@ -13,13 +13,17 @@ sys.path.append(os.path.expanduser('~/lib'))
 prog_dir = os.path.dirname(os.path.realpath(sys.argv[0])) 
 sys.path.append(prog_dir)
 
-data_path = '/Volumes/RamDisk/sensordata'
+if os.uname()[0] == 'Darwin':
+	data_path = '/Users/nicci/Network/sensor'
+else:
+	data_path = '/sensor'
 
-from dflib import widgets, rest
+from dflib import widgets, rest, psen
 from dflib.debug import debug
 
 ''' Colors for dark mode '''
 dark_mode_colors = {
+	'default':		'lightgray',
 	'humdity': 		'cyan',
 	'time': 		'yellow',
 	'name':		 	'#AD00AD',
@@ -33,6 +37,7 @@ dark_mode_colors = {
 }
 ''' Colors for light mode  '''
 light_mode_colors = {
+	'default':		'black',
 	'humdity': 		'#008000',
 	'time': 		'brown',
 	'name': 		'darkblue',
@@ -45,37 +50,7 @@ light_mode_colors = {
 	'temp_blue': 	'#000040'
 }
 
-class PsuedoSensor:
-	'''
-	Since the data collection is done by a daemon process, this class provides 
-	the rquired sensor interface to read sensor data from a ramdisk. 
-	'''
-	def __init__(self,**kwargs):
-		self.sensor = None
-		self.host = None
-		self.base_path = data_path
-		for k,v in kwargs.items():
-			setattr(self,k,v)
 
-	def read(self):
-		'''
-		read data, allowing for race conditions on sensor files
-		'''
-		tries = 0
-		dpath = os.path.join(self.base_path,f'{self.host}-{self.sensor}.json')
-		data = None
-		while not data:
-			try:
-				with open(dpath) as f:
-					data = json.load(f)
-			except json.decoder.JSONDecodeError:
-				tries += 1
-				data = None
-				time.sleep(.3)
-				if tries > 5:
-					return None
-		return data
-			
 class SenDetail(Gtk.Window):
 	'''
 	This class implements the sensor detail window. 
@@ -127,7 +102,11 @@ class SenDetail(Gtk.Window):
 		if self._use_rest:
 			self.sensor = rest.RestClient(server=self.server,sensor=self.sensor_name,host=self.host)
 		else:
-			self.sensor = PsuedoSensor(server=self.server,sensor=self.sensor_name,host=self.host)
+			self.sensor = psen.PsuedoSensor(
+				base_path = data_path,
+				server=self.server,
+				sensor=self.sensor_name,
+				host=self.host)
 		Gtk.Window.__init__(self, title=self.title)
 		self.connect("delete-event", self.stopit)
 		self.keepgoing = True
@@ -276,7 +255,7 @@ class SenDetail(Gtk.Window):
 				if k in self.keycolors:
 					color = self.keycolors[k]
 				else:
-					color = key_color
+					color = self.keycolors['default']
 				if k == 'loadavg':
 					la = []
 					for i in range(0,3):

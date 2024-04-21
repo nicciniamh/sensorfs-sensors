@@ -14,25 +14,27 @@ import json
 import psutil
 import gi
 import time
-
+import signal
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GLib, GdkPixbuf
 
-prog_dir = os.path.expanduser('/Users/nicci/sensors')
+prog_dir = os.path.expanduser('/Users/nicci/sensors-gui')
 sys.path.append(os.path.expanduser('/Users/nicci/lib'))
 sys.path.append(prog_dir)
 os.chdir(prog_dir)
 
 from dflib import widgets, rest
+from dflib.LiveChart import LiveChart
 from dflib.theme import change_theme
-from dflib.debug import debug, set_debug, dpprint
+from dflib.debug import debug, set_debug, dpprint, set_log_file
 import sensoredit
 from sendetail import SenDetail
 from about import AboutDialog
 from config import SensorsConfig
 from iconbox import IconWindow
+import chartwin
 
-program_version="2.1.3 (15 April 2024)"
+program_version="2.5.0 (20 April 2024)"
 pid_file = '/tmp/.sensors'
 
 class Toolbar(Gtk.Toolbar):
@@ -87,6 +89,7 @@ class Sensors(Gtk.Window):
 		self.config = config
 		Gtk.Window.__init__(self, title=f"Sensors {program_version}")
 		self.actives = {}
+		self.charts = {}
 		box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 		self.set_border_width(5)
 		self.set_default_size(900, 450)  # Set a fixed window size
@@ -108,7 +111,8 @@ class Sensors(Gtk.Window):
 			info_menu=self.get_info,
 			add_item_callback=self.add_sensor,
 			activate_on_single_click=False,
-			active_windows=self.actives
+			active_windows=self.actives,
+			active_charts=self.charts
 		)
 		self.toolbar = Toolbar(tbitems)
 		box.pack_start(self.toolbar,False,False,0)
@@ -116,17 +120,42 @@ class Sensors(Gtk.Window):
 		self.add(box)
 		self.connect('destroy', self.on_self_destroy)
 		self.connect('configure-event', self.on_configure_event)
+		#self.connect("window-state-event", self.on_window_state_event)
+		#self.connect("delete-event", self.on_window_state_event)
 
 		self.show_all()
 		window_icon = GdkPixbuf.Pixbuf.new_from_file('icons/humidity.png')
 		self.set_icon(window_icon)
 		GLib.timeout_add(50,self.present)
-		#GLib.timeout_add(150, self.open_previous_windows)
 		self.open_previous_windows()
+		GLib.timeout_add(250,self.check_window_state)
+		signal.signal(signal.SIGUSR1,self.on_sig_user1)
+
+	def on_window_state_event(self, widget, event):
+		debug('event mask: event.new_window_state & Gdk.WindowState.WITHDRAWN',event.new_window_state & Gdk.WindowState.WITHDRAWN )
+		# Check if the window is about to be minimized
+		if event.new_window_state & Gdk.WindowState.WITHDRAWN:
+			# Restore the window
+			#self.deiconify()
+			self.present()
+			return True
+
+	def check_window_state(self):
+		state = self.get_window().get_state()
+		if state & Gdk.WindowState.ICONIFIED:
+			debug("Iconified state, lets fix it")
+			self.present()
+		GLib.timeout_add(250,self.check_window_state)
+
+	def on_sig_user1(self,*args):
+		debug("")
+		self.maximize_all()
 
 	def minmize_all(self,*args):
 		''' hide all windows '''
 		for label,window in self.actives.items():
+			window.do_iconify()
+		for label, window in self.charts.items():
 			window.do_iconify()
 
 	def maximize_all(self,*args):
@@ -134,6 +163,12 @@ class Sensors(Gtk.Window):
 		for label,window in self.actives.items():
 			window.do_deiconify()
 			window.present()
+		for label, window in self.charts.items():
+			window.do_deiconify()
+			window.present()
+
+		self.deiconify()
+		self.present()
 
 	def open_previous_windows(self):
 		''' open any previous windows based on active flag in config '''
@@ -149,6 +184,10 @@ class Sensors(Gtk.Window):
 				continue
 			if sensdef['active']:
 				self.open_detail_window(name)
+			if 'chart' in sensdef:
+				if 'active' in sensdef['chart']:
+					if sensdef['chart']['active']:
+						self.open_chart(name)
 
 	def save_config(self):
 		''' Save program configuration '''
@@ -180,11 +219,38 @@ class Sensors(Gtk.Window):
 		self.icon_window.show_all()
 		self.toolbar.show_all()
 
+	def open_chart(self, item):
+			if item in self.charts:
+				self.charts[item].present()
+				return
+			stype = self.config['sensors'][item]['sensor']
+			if stype == 'cpu_usage':
+				keyname = 'usage'
+			else:
+				keyname = 'temp'
+			self.charts[item] = chartwin.ChartWindow(
+				self.config,
+				name=item,
+				key=keyname,
+				data_path=data_path,
+				on_close=self.chart_done)
+			debug(f"opened chartwindow for {item}[{keyname}], charts")
+			self.config['sensors'][item]['chart']['active'] = True
+			if item in self.actives:
+				atype=3
+			else:
+				atype=2
+			self.icon_window.activate_icon(item,atype)
+			self.save_config()
+
+
 	def menu_event(self, action, item):
 		''' oepn SensorEditor for selected sensor '''
 		if item in self.config['sensors']:
 			debug(item,action,self.config['sensors'][item])
-			if action == 'show':
+			if action == 'chart':
+				self.open_chart(item)
+			elif action == 'show':
 				debug('show')
 				if item in self.actives:
 					self.actives[item].present()
@@ -205,6 +271,18 @@ class Sensors(Gtk.Window):
 				self.remove_sensor(item)
 		else:
 			debug(f'no {item} in sensors')
+
+	def chart_done(self,item):
+		debug(f"chart for {item} complete")
+		if item in self.charts:
+			del self.charts[item] 
+		if item in self.actives:
+			atype = 1
+		else:
+			atype = 0
+		self.icon_window.activate_icon(item,atype)
+		self.config['sensors'][item]['chart']['active'] = False
+		self.save_config()
 
 	def on_edit_done(self, name_in, sensor_in, name, sensor):
 		'''
@@ -254,7 +332,11 @@ class Sensors(Gtk.Window):
 			callback=self.on_detail_done,
 			move_callback=self.on_detail_move)
 		debug("Attemping activation",name)
-		self.icon_window.activate_icon(name)
+		if self.charts and name in self.charts:
+			atype=3
+		else:
+			atype=1
+		self.icon_window.activate_icon(name,atype)
 		debug("setting active to true",name)
 		self.actives[name] = win
 		self.config['sensors'][name]['active'] = True
@@ -288,7 +370,11 @@ class Sensors(Gtk.Window):
 		the icon to show inactive.
 		'''
 		self.config['sensors'][name]['active'] = False
-		self.icon_window.deactivate_icon(name)
+		if self.charts and name in self.charts:
+			atype=2
+		else:
+			atype=0
+		self.icon_window.deactivate_icon(name,atype)
 		del self.actives[name]
 		self.save_config()
 
@@ -445,45 +531,26 @@ if __name__ == "__main__":
 			description="GUI Interface to read sensors via SensorFS RestAPI",
 			epilog="A SensorFS RestAPI Example. See https://github.com/nicciniamh/sensorfs"
 		)
-	parser.add_argument('-d','--debug',action='store_true',help='turn on copious debugging messages')
+	parser.add_argument('-d','--debug',action='store_true',help='turn on copious debugging messages',default=False)
 	parser.add_argument('--no-daemon',action='store_true',default=False, help='do not start daemon if not running')
-	sdp = '/Volumes/RamDisk/sensordata'
-	if not os.path.exists(sdp) or not os.path.isdir(sdp):
-		print(f"The path, {sdp}, does not exist. Cannot continue",file=sys.stderr)
+	parser.add_argument('--run-dir',type=str,default=prog_dir,help='Set runtime path')
+	parser.add_argument('-l','--logfile',type=str,metavar='file',default=False, help='send debug messages to file')
+	if os.uname()[0] == 'Darwin':
+		data_path = '/Users/nicci/Network/sensor'
+	else:
+		data_path = '/sensor'
+	if not os.path.exists(data_path) or not os.path.isdir(data_path):
+		print(f"The path, {data_path}, does not exist. Cannot continue",file=sys.stderr)
 		sys.exit(1)
 	args = parser.parse_args()
 	config_file = os.path.join(prog_dir,'sensors.json')
 	with open(config_file,"r") as f:
 		config = json.load(f)
 	set_debug(args.debug)
-	start_daemon = daemon = True
-	if not args.no_daemon:
-		debug('starting daemon')
-		try:
-			if os.path.exists('/tmp/get-data.pid'):
-				with open('/tmp/get-data.pid') as f:
-					pid = int(f.read().strip())
-				daemon = psutil.Process(pid)
-				debug(f'Daemon already running on pid {pid}')
-				start_daemon = False
-		except:
-			start_daemon = True
-		if start_daemon:
-			try:
-				daemon = os.spawnl(os.P_NOWAIT, 'get-data.py','get-data.py')
-				if daemon == 0 or type(daemon) is not int:
-					daemon = False
-				else:
-					time.sleep(5)
-			except Exception as e:
-				debug(e)
-				daemon = False
-
-	if not daemon:
-		message = f'<span color="red">Cannot start daemon</span>'
-		err = widgets.ErrorDialog('Error',message,Gtk.main_quit)
-		Gtk.main()
-		sys.exit(1)
+	if args.debug:
+		set_debug(True)
+	if args.logfile:
+		set_log_file(args.logfile)
 	dark_mode = False
 	if 'dark_mode' in config:
 		dark_mode = config['dark_mode']
@@ -496,16 +563,12 @@ if __name__ == "__main__":
 		try:
 			p = psutil.Process(pid=pid)
 			other_instance = True
+			os.kill(pid,signal.SIGUSR1)
 		except:
 			os.unlink(pid_file)
 			other_instance = False
-	if other_instance:
-		message = f'<span color="red">There is another instance\nrunning at pid {pid}</span>'
-		err = widgets.ErrorDialog('Error',message,Gtk.main_quit)
-		Gtk.main()
-	else:
-		with open(pid_file,'w') as f:
-			f.write(f'{os.getpid()}')
-		win = Sensors(config)
-		win.connect("destroy", Gtk.main_quit)
-		Gtk.main()
+	with open(pid_file,'w') as f:
+		f.write(f'{os.getpid()}')
+	win = Sensors(config)
+	win.connect("destroy", Gtk.main_quit)
+	Gtk.main()
