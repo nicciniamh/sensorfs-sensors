@@ -13,6 +13,11 @@ run on your system without teaking paths and creating ramdisks.
 The main program presents a window with icons representing each defined sensors. Buttons on a toolbar allow app and sensor configuration. (changes to this will be reflected on the daemon)
 
 Double-clicking an icon brings up a detail window. If there is already a detail window open, that window is raised.
+Right clicking an icon brings up a context menu with: 
+![Context-Menu](assets/contextmenu.jpg)
+
+From here you can open a detail window, show a chart of a data point for that sensor, remove the sensor, get information on the sensor, edit the sensor and sort in various ways. 
+
 
 Icons can be sorted by name or type in ascending or descending direction. 
 
