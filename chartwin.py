@@ -124,6 +124,7 @@ class ChartWindow(Gtk.Window):
 		#self.kavail = []
 		sdata = self.sensor.read()
 		self.kavail = [ k for k in sdata.keys() if k not in ['description','loadavg','modinfo','name','time','boot_time']]
+		self.kavail.sort()
 		Gtk.Window.__init__(self,title=self.name)
 		self.connect('destroy',self.stopit)
 		self.data = boundlist.BoundList(50)

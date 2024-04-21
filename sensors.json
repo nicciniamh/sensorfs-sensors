@@ -299,8 +299,8 @@
             "host": "pi4",
             "sensor": "aht10",
             "pos": [
-                478,
-                826
+                471,
+                820
             ],
             "active": true,
             "icon": "icons/ahtsen.png",
@@ -593,8 +593,8 @@
             "host": "pi3",
             "icon": "icons/ahtsen.png",
             "pos": [
-                440,
-                584
+                464,
+                564
             ],
             "active": true,
             "chart": {
