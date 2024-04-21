@@ -329,6 +329,7 @@ class Sensors(Gtk.Window):
 			host=host,
 			title=name,
 			position=pos,
+			data_path = data_path,
 			callback=self.on_detail_done,
 			move_callback=self.on_detail_move)
 		debug("Attemping activation",name)
@@ -526,23 +527,25 @@ class InfoWindow(Gtk.Window):
 			self.destroy()
 
 if __name__ == "__main__":
+	if os.uname()[0] == 'Darwin':
+		data_path = os.path.expanduser('~/Network/sensor')
+	else:
+		data_path = '/sensor'
 	parser = argparse.ArgumentParser(
 			prog=f"Sensors {program_version}",
 			description="GUI Interface to read sensors via SensorFS RestAPI",
 			epilog="A SensorFS RestAPI Example. See https://github.com/nicciniamh/sensorfs"
 		)
 	parser.add_argument('-d','--debug',action='store_true',help='turn on copious debugging messages',default=False)
-	parser.add_argument('--no-daemon',action='store_true',default=False, help='do not start daemon if not running')
-	parser.add_argument('--run-dir',type=str,default=prog_dir,help='Set runtime path')
+	parser.add_argument('--data-dir',type=str,default=data_path, metavar='path', help='path for sensor data')
+	parser.add_argument('--run-dir',type=str,default=prog_dir,metavar='path',help='Set runtime path')
+
 	parser.add_argument('-l','--logfile',type=str,metavar='file',default=False, help='send debug messages to file')
-	if os.uname()[0] == 'Darwin':
-		data_path = '/Users/nicci/Network/sensor'
-	else:
-		data_path = '/sensor'
+	args = parser.parse_args()
+	data_path = args.data_dir
 	if not os.path.exists(data_path) or not os.path.isdir(data_path):
 		print(f"The path, {data_path}, does not exist. Cannot continue",file=sys.stderr)
 		sys.exit(1)
-	args = parser.parse_args()
 	config_file = os.path.join(prog_dir,'sensors.json')
 	with open(config_file,"r") as f:
 		config = json.load(f)

@@ -14,7 +14,7 @@ prog_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 sys.path.append(prog_dir)
 
 if os.uname()[0] == 'Darwin':
-	data_path = '/Users/nicci/Network/sensor'
+	data_path = os.path.expanduser('~/Network/sensor')
 else:
 	data_path = '/sensor'
 
@@ -79,10 +79,9 @@ class SenDetail(Gtk.Window):
 		self._initial_position_set = False
 		self.iconified = False
 		self._data_thread = None
-		self._data_q = None
-		self._command_q = None
+		self.data_path = data_path
 		for k,v in kwargs.items():
-			if k in ['config','host','sensor_name','title','callback','position','move_callback']:
+			if k in ['config','host','sensor_name','title','callback','position','move_callback','data_path']:
 				setattr(self,k,v)
 			else:
 				raise ValueError(f'Invalid keyword argument {k}')
@@ -103,7 +102,7 @@ class SenDetail(Gtk.Window):
 			self.sensor = rest.RestClient(server=self.server,sensor=self.sensor_name,host=self.host)
 		else:
 			self.sensor = psen.PsuedoSensor(
-				base_path = data_path,
+				base_path = self.data_path,
 				server=self.server,
 				sensor=self.sensor_name,
 				host=self.host)

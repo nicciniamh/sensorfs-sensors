@@ -26,12 +26,14 @@ Icons can be sorted by name or type in ascending or descending direction.
 Well, this is the fun bit isn't it. 
 
 Frist, clone this repository into where it will run. You will need to copy or rename sensors.json.dist to sensors.json. 
-
+<s>
 Since this was made for my mac with a ramdisk on /Volumes/RamDisk and data stored on /Volumes/RamDisk/sensordata. To change this location get-data.py must be edited and sendetail must be edited to relect the place to store and read data. 
 
-The daemon writes data anywhere from 200ms to 2000ms. This can fatique solid state media and really should be done on a ramdisk. 
+The daemon writes data anywhere from 200ms to 2000ms. This can fatique solid state media and really should be done on a ramdisk.</s>
 
-This program is meant to run from it's own directory. See prog_dir in sensors.py and get-data.py. 
+The data source is from network mounted filesystems. On macOS the path used is ~/Network/sensors. 
+
+<s>This program is meant to run from it's own directory. See prog_dir in sensors.py and get-data.py. </s>
 
 
 # Intellectual Property
