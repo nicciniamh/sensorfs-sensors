@@ -3,7 +3,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib
 
-from dflib import widgets, rest
+from dflib import widgets, rest, psen
 from dflib.debug import debug
 
 class AboutDialog(widgets.AboutDialog):
@@ -36,10 +36,17 @@ class AboutDialog(widgets.AboutDialog):
 		self.set_about_text()
 	
 	def get_markup(self):
+		stats = f"""
+
+		PSen Reads   {psen.stats['reads']}
+		Rest: Sent   {rest.stats['sent']}
+		Rest: Errors {rest.stats['errors']}
+		
+		"""
 		return f"""
 		<span size="large"><b>Sensors {self.version}</b></span>
 		A SensorFS RestAPI example.
-
+		{stats}
 		Copyright © 2024 Nicole Stevens
 		<a href="https://github.com/nicciniamh">https://github.com/nicciniamh</a>
 		"""

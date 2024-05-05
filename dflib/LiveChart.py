@@ -113,18 +113,11 @@ class LiveChart(Gtk.Box):
 		if self.relative_scale:
 			if len(self.data) >1:
 				mnv = min(self.data)
-				mxv = max(self.data)
+				mnv -= (mnv*1.25)
+				mxv = max(self.data) 
+				mxv += (mxv*1.25)
 				scale = (mxv - mnv)
-				if scale < 0.5:
-					scale=1.5
-				if not self.scale_set:
-					self.min_value = mnv - scale
-					self.max_value = mxv + scale
-					self.scale_set = True
-				else:
-					self.min_value = min(self.min_value,mnv + scale)
-					self.max_value = max(self.max_value,mxv - scale)
-		#debug((self.min_value,self.max_value),scale,relative_scale)
+
 		self.queue_draw()
 
 	def set_min_value(self,min_value):

@@ -3,6 +3,11 @@ import sys
 import json
 import time
 
+
+stats = {
+	'reads': 0
+}
+
 class PsuedoSensor:
 	'''
 	Since the data collection is done by a daemon process, this class provides 
@@ -19,6 +24,7 @@ class PsuedoSensor:
 		'''
 		read data, allowing for race conditions on sensor files
 		'''
+		stats['reads'] += 1
 		tries = 0
 		dpath = os.path.join(self.base_path,f'{self.host}/{self.sensor}/{self.sensor}.json')
 		data = None

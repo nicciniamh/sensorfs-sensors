@@ -5,7 +5,7 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf
 
 from dflib.debug import debug
-from dflib import IconState	
+import iconimages
 
 class IconWindow(Gtk.ScrolledWindow):
 	def __init__(self, **kwargs):
@@ -37,16 +37,18 @@ class IconWindow(Gtk.ScrolledWindow):
 
 		if self.info_menu and not callable(self.info_menu):
 			raise AttributeError('callback for info_menu must be callable')
-		debug("activate_on_single_click",self.activate_on_single_click)
 		self.icon_store = Gtk.ListStore(GdkPixbuf.Pixbuf, str, str)
 		self.icon_view = Gtk.IconView(model=self.icon_store)
-		self.icon_view.set_activate_on_single_click(self.activate_on_single_click)
 		self.icon_view.set_pixbuf_column(0)
 		self.icon_view.set_text_column(1)
-		self.icon_view.connect("item-activated", self.on_icon_double_click)
 		if self.activate_on_single_click:
 			self.icon_view.connect("item-activated", self.on_icon_double_click)
-		self.icon_view.connect("button-press-event", self.on_icon_button_press)
+			self.icon_menu = False
+		else:
+			self.icon_view.connect("button-press-event", self.on_icon_button_press)
+		debug("activate_on_single_click",self.activate_on_single_click)
+		self.icon_view.set_activate_on_single_click(self.activate_on_single_click)
+		self.icon_view.connect("item-activated", self.on_icon_double_click)
 
 		# Apply CSS styling to control padding around icons
 		self.css_provider = Gtk.CssProvider()
@@ -58,11 +60,20 @@ class IconWindow(Gtk.ScrolledWindow):
 		self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 		self.add(self.icon_view)
 		self.create_icons()
+		#self.context_menu = self.create_scrolled_window_context_menu()
 
 		self.show_all()  # Ensure the window is shown initially
 
 		# Connect button-press-event to scrolled window
-		self.connect("button-press-event", self.on_scrolled_window_button_press)
+		self.show_all()
+
+	def get_selected_item(self):
+		path = self.icon_view.get_selected_items()
+		if path:
+			item = self.icon_store[path][1]
+			return item
+		return None
+
 
 	def rename_icon(self,old,new):
 		if old in self.icon_dict:
@@ -132,7 +143,7 @@ class IconWindow(Gtk.ScrolledWindow):
 			aipath,ext = os.path.splitext(iaipath)
 			aipath = f'{aipath}-active{ext}'
 
-			icon_images = 	self.get_icon_image(value['icon'])
+			icon_images = 	iconimages.get_icon_images(value['icon'])
 			self.pixmap[value['name']] = {
 				"icon_name": value['icon'],
 				'images': icon_images}
@@ -149,34 +160,28 @@ class IconWindow(Gtk.ScrolledWindow):
 			else:
 				self.icon_store.append([pimage, value["name"], "icon"])
 			self.sort_by_name()
+			if self.icon_menu:
+				self.icon_dict[key]['menu'] = self.create_icon_context_menu(key)
 
 	def on_icon_button_press(self, widget, event):
 		if event.button == Gdk.BUTTON_SECONDARY:
 			path = self.icon_view.get_path_at_pos(int(event.x), int(event.y))
 			if path and self.icon_menu:
-				debug(event.x,event.y)
 				self.selected_x = event.x
 				self.selected_y = event.y
 				path = self.icon_view.get_path_at_pos(event.x,event.y)
-				if path:
-					self.icon_view.select_path(path)
-				menu = self.create_icon_context_menu(path)
+				name = self.icon_store[path][1]
+				self.icon_view.select_path(path)
+				menu = self.icon_dict[name]['menu']
 				menu.show_all()
 				menu.popup(None, None, None, None, event.button, event.time)
-				return True
-		return False
-
-	def _xsort_menu(self):
-		sort_item = Gtk.MenuItem(label="Sort By")
-		sort_submenu = Gtk.Menu()
-		sort_name_item = Gtk.MenuItem(label="Name")
-		sort_type_item = Gtk.MenuItem(label="Type")
-		sort_item.set_submenu(sort_submenu)
-		sort_submenu.append(sort_name_item)
-		sort_submenu.append(sort_type_item)
-
-		return sort_item, sort_submenu
-
+		elif event.button == Gdk.BUTTON_PRIMARY:
+			# Left-click handling code
+			path = self.icon_view.get_path_at_pos(int(event.x), int(event.y))
+			if path:
+				self.icon_view.select_path(path)  # Manually select the item
+		return True
+	
 	def _sort_menu(self):
 		sort_item = Gtk.MenuItem(label="Sort By")
 		sort_submenu = Gtk.Menu()
@@ -191,28 +196,6 @@ class IconWindow(Gtk.ScrolledWindow):
 		sort_type_item.connect("activate", self.sort_by_type)
 
 		return sort_item, sort_submenu
-
-	def create_scrolled_window_context_menu(self):
-		menu = Gtk.Menu()
-		sort_item, sort_submenu = self._sort_menu()
-
-		add_item = Gtk.MenuItem(label="New Sensor")
-		add_item.connect('activate', self.add_item_activate)
-		menu.append(add_item)
-		menu.append(sort_item)
-
-		sort_dir_item = Gtk.MenuItem('Sort Direction')
-		sort_dir_submenu = Gtk.Menu()
-		sort_dir_asc_item = Gtk.MenuItem(label="Ascending")
-		sort_dir_dsc_item = Gtk.MenuItem(label="Descending")
-		sort_dir_item.set_submenu(sort_dir_submenu)
-		sort_dir_submenu.append(sort_dir_asc_item)
-		sort_dir_submenu.append(sort_dir_dsc_item)
-		sort_dir_asc_item.connect("activate", self._set_sort_dir, Gtk.SortType.ASCENDING)
-		sort_dir_dsc_item.connect("activate", self._set_sort_dir, Gtk.SortType.DESCENDING)
-		menu.append(sort_dir_item)
-
-		return menu
 
 	def xcreate_scrolled_window_context_menu(self):
 		menu = Gtk.Menu()
@@ -236,39 +219,13 @@ class IconWindow(Gtk.ScrolledWindow):
 
 		return menu
 
-	def create_icon_context_menu(self, path):
-		item = path[0]
-		name = self.icon_store[item][1]
-		detail_text = "Open Detail Window"
-		show_item = None
-		if name in self.config['sensors']:
-			if self.config['sensors'][name]['active']:
-				detail_text = "Close detail window"
-				show_item = Gtk.MenuItem(label="Show")
-				show_item.connect('activate',self.on_menu_show,path)
-
+	def create_scrolled_window_context_menu(self):
 		menu = Gtk.Menu()
-		chart_item = Gtk.MenuItem(label="Show Chart")
-		chart_item.connect('activate',self.on_show_chart,path)
-		edit_item = Gtk.MenuItem(label="Edit")
-		remove_item = Gtk.MenuItem(label="Remove")
-		edit_item.connect("activate", self.on_icon_edit_activate, path)
-		remove_item.connect("activate", self.on_icon_remove_activate, path)
-
-		detail_item = Gtk.MenuItem(detail_text)
-		detail_item.connect('activate',self.on_icon_detail_activate, path)
 		sort_item, sort_submenu = self._sort_menu()
-		if show_item:
-			menu.append(show_item)
-		menu.append(detail_item)
-		menu.append(chart_item)
-		menu.append(edit_item)
-		menu.append(remove_item)
-		if self.info_menu:
-			info_item = Gtk.MenuItem(label="Get Info")
-			info_item.connect('activate',self.on_info_item_activate, path)
-			menu.append(info_item)
 
+		add_item = Gtk.MenuItem(label="New Sensor")
+		add_item.connect('activate', self.add_item_activate)
+		menu.append(add_item)
 		menu.append(sort_item)
 
 		sort_dir_item = Gtk.MenuItem('Sort Direction')
@@ -282,7 +239,44 @@ class IconWindow(Gtk.ScrolledWindow):
 		sort_dir_dsc_item.connect("activate", self._set_sort_dir, Gtk.SortType.DESCENDING)
 		menu.append(sort_dir_item)
 
+		return menu
 
+	def create_icon_context_menu(self,name):
+		detail_text = "Open Detail Window"
+		show_item = None
+		menu = Gtk.Menu()
+		chart_item = Gtk.MenuItem(label="Show Chart")
+		chart_item.connect('activate',self.on_show_chart,name)
+		edit_item = Gtk.MenuItem(label="Edit")
+		remove_item = Gtk.MenuItem(label="Remove")
+		edit_item.connect("activate", self.on_icon_edit_activate, name)
+		remove_item.connect("activate", self.on_icon_remove_activate, name)
+
+		detail_item = Gtk.MenuItem('Show detail window')
+		detail_item.connect('activate',self.on_icon_detail_activate, name)
+		sort_item, sort_submenu = self._sort_menu()
+		if self.info_menu:
+			info_item = Gtk.MenuItem(label="Get Info")
+			info_item.connect('activate',self.on_info_item_activate, name)
+			menu.append(info_item)
+		menu.append(edit_item)
+		menu.append(remove_item)
+		if show_item:
+			menu.append(show_item)
+		menu.append(detail_item)
+		menu.append(chart_item)
+		menu.append(sort_item)
+
+		sort_dir_item = Gtk.MenuItem('Sort Direction')
+		sort_dir_submenu = Gtk.Menu()
+		sort_dir_asc_item = Gtk.MenuItem(label="Ascending")
+		sort_dir_dsc_item = Gtk.MenuItem(label="Descending")
+		sort_dir_item.set_submenu(sort_dir_submenu)
+		sort_dir_submenu.append(sort_dir_asc_item)
+		sort_dir_submenu.append(sort_dir_dsc_item)
+		sort_dir_asc_item.connect("activate", self._set_sort_dir, Gtk.SortType.ASCENDING)
+		sort_dir_dsc_item.connect("activate", self._set_sort_dir, Gtk.SortType.DESCENDING)
+		menu.append(sort_dir_item)
 		return menu
 
 	def on_menu_detail(self,widget,path):
@@ -290,53 +284,81 @@ class IconWindow(Gtk.ScrolledWindow):
 		name = self.icon_store[item][1]
 
 	def on_show_chart(self,widget,path):
-		item = path[0]
-		name = self.icon_store[item][1]
+		if type(path) is not str:
+			item = path[0]
+			if type(item) is str:
+				debug('Dunno what to do  with',item)
+				return
+			name = self.icon_store[item][1]
+		else:
+			name = path
 		self.menu_callback('chart',name)
+		return False
+
 
 	def on_info_item_activate(self, widget, path):
 		if not self.info_menu:
 			return
 		if not callable(self.info_menu):
 			raise AttributeError('info_menu is not callable')
-		item = path[0]
-		name = self.icon_store[item][1]
+		if type(path) is str:
+			name = path
+		else:
+			item = path[0]
+			name = self.icon_store[item][1]
 		self.info_menu(name)
-
-	def on_menu_show(self,widget,path):
-		item = path[0]
-		name = self.icon_store[item][1]
+		return False
+	def on_chart_conf(self, widget, path):
+		# Retrieve the selected item and perform edit action
+		if type(path) is str:
+			name = path
+		else:
+			item = path[0]
+			name = self.icon_store[item][1]
 		if callable(self.menu_callback):
-			self.menu_callback('show', name)
-
+			self.menu_callback('chartconf', name)
+		return False
+	
 	def on_icon_edit_activate(self, widget, path):
 		# Retrieve the selected item and perform edit action
-		item = path[0]
-		name = self.icon_store[item][1]
+		if type(path) is str:
+			name = path
+		else:
+			item = path[0]
+			name = self.icon_store[item][1]
 		if callable(self.menu_callback):
 			self.menu_callback('edit', name)
-
+		return False
+	
 	def on_icon_detail_activate(self, widget, path):
 		# Retrieve the selected item and perform edit action
-		item = path[0]
-		name = self.icon_store[item][1]
+		if type(path) is not list:
+			name = path
+		else:
+			item = path[0]
+			name = self.icon_store[item][1]
+		
 		if callable(self.menu_callback):
 			self.menu_callback('detail', name)
-
+		return False
 
 	def on_icon_remove_activate(self, widget, path):
 		# Retrieve the selected item and perform remove action
-		item = path[0]
-		name = self.icon_store[item][1]
+		if type(path) is not list:
+			name = path
+		else:
+			item = path[0]
+			name = self.icon_store[item][1]
 		if callable(self.menu_callback):
 			self.menu_callback('remove', name)
 
 	def on_scrolled_window_button_press(self, widget, event):
+		return False
 		if event.button == Gdk.BUTTON_SECONDARY:
 			if self.context_menu:
 				menu = self.create_scrolled_window_context_menu()
-				menu.show_all()
-				menu.popup(None, None, None, None, event.button, event.time)
+				self.context_menu.show_all()
+				self.context_menu.popup(None, None, None, None, event.button, event.time)
 			return True
 		return False
 
@@ -369,6 +391,7 @@ class IconWindow(Gtk.ScrolledWindow):
 
 
 	def on_icon_double_click(self, icon_view, path):
+		debug(path)
 		name = self.icon_store[path][1]
 		if self.active_charts and name in self.active_charts:
 			atype=3
@@ -379,47 +402,4 @@ class IconWindow(Gtk.ScrolledWindow):
 		if callable(self.activate_callback):
 			self.activate_callback(name)
 
-	def get_icon_image(self,image1_path):
-		'''
-		Create a suitable icon from a file for both regular and acive by 
-		applying an image with the active badge to the source. Return both GdkPixbufs
-		'''
-		# Load images
-
-		image1 = GdkPixbuf.Pixbuf.new_from_file(image1_path)
-		badge_images = [image1]
-		for active in ['badge','chart','both']:
-			ipath = os.path.join(os.path.dirname(image1_path),f"active_{active}.png")
-			image2 = GdkPixbuf.Pixbuf.new_from_file(ipath)
-
-			# Scale image1 to the desired dimensions
-			scaled_image1 = image1.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
-
-			# Create a new transparent image to composite onto
-			composite_image = GdkPixbuf.Pixbuf.new(GdkPixbuf.Colorspace.RGB, True, 8, 64, 64)
-			composite_image.fill(0x000000)  # Fill with black
-
-			# Draw scaled_image1 onto the composite image
-			scaled_image1.copy_area(0, 0, 64, 64, composite_image, 0, 0)
-
-			# Calculate position to center image2 on composite_image
-			x_offset = (64 - image2.get_width()) // 2
-			y_offset = (64 - image2.get_height()) // 2
-
-			# Draw image2 onto the composite image
-			image2.composite(
-				composite_image,
-				x_offset,
-				y_offset,
-				image2.get_width(),
-				image2.get_height(),
-				x_offset,
-				y_offset,
-				1,
-				1,
-				GdkPixbuf.InterpType.BILINEAR,
-				255,
-			)
-			badge_images.append(composite_image)
-		return (badge_images)
-
+		return False 

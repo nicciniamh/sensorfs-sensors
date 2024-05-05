@@ -255,11 +255,8 @@ class SenDetail(Gtk.Window):
 					color = self.keycolors[k]
 				else:
 					color = self.keycolors['default']
-				if k == 'loadavg':
-					la = []
-					for i in range(0,3):
-						la.append('{:.2f}'.format(v[i]))
-					v = ', '.join(la)
+				if k == type(v) is list:
+					v = v[0]
 
 				if type(v) is float:
 					if k  in ['high', 'low','temp','tempc']:

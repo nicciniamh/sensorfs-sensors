@@ -14,7 +14,8 @@ OPTIONS = {
 }
 
 setup(
-    app=APP,
+    name="Sensors GUI",
+    app=['sensors.py'],
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],

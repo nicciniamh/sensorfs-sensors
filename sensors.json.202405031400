@@ -1,0 +1,1012 @@
+{
+    "server": "192.168.1.119",
+    "dark_mode": true,
+    "modified": false,
+    "poll_interval": 750.0,
+    "sensors": {
+        "::main::": {
+            "active": true,
+            "pos": [
+                79,
+                36
+            ],
+            "size": [
+                912,
+                450
+            ]
+        },
+        "::about::": {
+            "active": false,
+            "pos": [
+                104,
+                62
+            ]
+        },
+        "Pi Zero Usage": {
+            "host": "piz",
+            "sensor": "cpu_usage",
+            "pos": [
+                36,
+                530
+            ],
+            "active": false,
+            "icon": "icons/raspberrypi.png",
+            "chart": {
+                "active": true,
+                "background_color": "#01054f",
+                "key": "usage",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        50,
+                        95
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0.0,
+                        100.0
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 1000,
+                "legend_color": "#99c1f1",
+                "line_color": "#3584e4",
+                "line_width": 4.0,
+                "min_value": 0.0,
+                "max_value": 100.0,
+                "pos": [
+                    1031,
+                    463
+                ],
+                "units": {
+                    "usage": {
+                        "text": "%",
+                        "digits": 1
+                    }
+                }
+            }
+        },
+        "Pi 3 Usage": {
+            "host": "pi3",
+            "sensor": "cpu_usage",
+            "pos": [
+                119,
+                595
+            ],
+            "active": false,
+            "icon": "icons/raspberrypi.png",
+            "chart": {
+                "active": true,
+                "background_color": "#013413",
+                "key": "usage",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        50,
+                        95
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0.0,
+                        3.0
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 1000,
+                "legend_color": "#3584e4",
+                "line_color": "#33d17a",
+                "line_width": 3.0,
+                "min_value": 0.0,
+                "max_value": 3.0,
+                "pos": [
+                    1026,
+                    53
+                ],
+                "units": {
+                    "usage": {
+                        "text": "",
+                        "digits": 2
+                    }
+                }
+            }
+        },
+        "Weather": {
+            "host": "pi4",
+            "sensor": "weather",
+            "pos": [
+                75,
+                539
+            ],
+            "active": false,
+            "icon": "icons/weather.png",
+            "chart": {
+                "active": false,
+                "background_color": "#000000",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        35.0,
+                        60.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 901000,
+                "legend_color": "#5e5c64",
+                "line_color": "#ffffff",
+                "line_width": 3.0,
+                "min_value": 35.0,
+                "max_value": 60.0,
+                "pos": [
+                    307,
+                    307
+                ],
+                "units": {
+                    "temp": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "wdir": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "wind": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "cond": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "high": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "humidity": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "icode": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "location": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "low": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "pressure": {
+                        "text": "",
+                        "digits": 4
+                    }
+                }
+            }
+        },
+        "Room - Terry": {
+            "host": "pi3",
+            "sensor": "aggregate",
+            "active": false,
+            "pos": [
+                529,
+                884
+            ],
+            "icon": "icons/aggregate.png",
+            "chart": {
+                "size": [
+                    400,
+                    309
+                ],
+                "pos": [
+                    1500,
+                    674
+                ],
+                "interval": 500.0,
+                "background_color": "#000000",
+                "legend_color": "#ffffff",
+                "line_color": "#0000ff",
+                "line_width": 1,
+                "min_value": 50.0,
+                "max_value": 95.0
+            }
+        },
+        "Room - Living": {
+            "host": "piz",
+            "sensor": "dht22",
+            "icon": "icons/dht.png",
+            "pos": [
+                1069,
+                508
+            ],
+            "active": false,
+            "chart": {
+                "active": false,
+                "background_color": "#000000",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        74.0,
+                        80.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 360000,
+                "legend_color": "#a0a0a0",
+                "line_color": "#0000ff",
+                "line_width": 5.0,
+                "min_value": 74.0,
+                "max_value": 80.0,
+                "pos": [
+                    540,
+                    561
+                ],
+                "units": {
+                    "humidity": {
+                        "text": "%",
+                        "digits": 1
+                    },
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    }
+                }
+            }
+        },
+        "Pi 4 Usage": {
+            "host": "pi4",
+            "sensor": "cpu_usage",
+            "pos": [
+                602,
+                587
+            ],
+            "active": false,
+            "icon": "icons/raspberrypi.png",
+            "chart": {
+                "active": true,
+                "background_color": "#2d014f",
+                "key": "usage",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        50,
+                        95
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0.0,
+                        100.0
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0.0,
+                        50.0
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 1000,
+                "legend_color": "#9a9996",
+                "line_color": "#dc8add",
+                "line_width": 3.0,
+                "min_value": 0.0,
+                "max_value": 50.0,
+                "pos": [
+                    1536,
+                    53
+                ],
+                "units": {
+                    "core0": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "vmem": {
+                        "text": "",
+                        "digits": 4
+                    },
+                    "usage": {
+                        "text": "",
+                        "digits": 2
+                    }
+                }
+            }
+        },
+        "Sensor - aht(1)": {
+            "host": "pi4",
+            "sensor": "aht10",
+            "pos": [
+                571,
+                653
+            ],
+            "active": false,
+            "icon": "icons/thermometer.png",
+            "chart": {
+                "active": true,
+                "background_color": "#241f31",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        71.0,
+                        75.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 360000,
+                "legend_color": "#5e5c64",
+                "line_color": "#dc8add",
+                "line_width": 4.0,
+                "min_value": 71.0,
+                "max_value": 75.0,
+                "pos": [
+                    1534,
+                    462
+                ],
+                "units": {
+                    "humidity": {
+                        "text": "%",
+                        "digits": 1
+                    },
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    },
+                    "pressure": {
+                        "text": "mbars"
+                    }
+                }
+            }
+        },
+        "Sensor - aht (2)": {
+            "sensor": "aht10",
+            "host": "pi3",
+            "icon": "icons/gauge3.png",
+            "pos": [
+                83,
+                575
+            ],
+            "active": false,
+            "chart": {
+                "active": true,
+                "background_color": "#1f4603",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        70.0,
+                        77.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 360000,
+                "legend_color": "#9a9996",
+                "line_color": "#33d17a",
+                "line_width": 4.0,
+                "min_value": 70.0,
+                "max_value": 77.0,
+                "pos": [
+                    495,
+                    568
+                ],
+                "units": {
+                    "humidity": {
+                        "text": "%",
+                        "digits": 1
+                    },
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    },
+                    "pressure": {
+                        "text": "mbars"
+                    }
+                }
+            }
+        },
+        "Sensor - bmp280(1)": {
+            "host": "pi4",
+            "sensor": "bmp280",
+            "icon": "icons/gauge1.png",
+            "pos": [
+                502,
+                542
+            ],
+            "active": false,
+            "chart": {
+                "active": false,
+                "background_color": "#01054f",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        50.0,
+                        95.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 1000,
+                "legend_color": "#63452c",
+                "line_color": "#ffa348",
+                "line_width": 2.0,
+                "min_value": 50.0,
+                "max_value": 95.0,
+                "pos": [
+                    1542,
+                    858
+                ],
+                "units": {
+                    "humidity": {
+                        "text": "%",
+                        "digits": 1
+                    },
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    },
+                    "pressure": {
+                        "text": "mbars"
+                    }
+                }
+            }
+        },
+        "Sensor - bmp280(2)": {
+            "host": "pi3",
+            "sensor": "bmp280",
+            "icon": "icons/gauge2.png",
+            "pos": [
+                101,
+                178
+            ],
+            "active": false,
+            "chart": {
+                "active": false,
+                "background_color": "#241f31",
+                "key": "temp",
+                "keyranges": {
+                    "tempc": [
+                        10,
+                        35
+                    ],
+                    "temp": [
+                        75.0,
+                        85.0
+                    ],
+                    "humidity": [
+                        30,
+                        100
+                    ],
+                    "pressure": [
+                        950,
+                        1030
+                    ],
+                    "core0": [
+                        0,
+                        100
+                    ],
+                    "core1": [
+                        0,
+                        100
+                    ],
+                    "core2": [
+                        0,
+                        100
+                    ],
+                    "core3": [
+                        0,
+                        100
+                    ],
+                    "core4": [
+                        0,
+                        100
+                    ],
+                    "core5": [
+                        0,
+                        100
+                    ],
+                    "core6": [
+                        0,
+                        100
+                    ],
+                    "core7": [
+                        0,
+                        100
+                    ],
+                    "cputemp": [
+                        0,
+                        100
+                    ],
+                    "usage": [
+                        0,
+                        100
+                    ],
+                    "vmem": [
+                        0,
+                        100
+                    ]
+                },
+                "interval": 360000,
+                "legend_color": "#5e5c64",
+                "line_color": "#06c2ff",
+                "line_width": 4.0,
+                "min_value": 75.0,
+                "max_value": 85.0,
+                "pos": [
+                    34,
+                    554
+                ],
+                "units": {
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    },
+                    "pressure": {
+                        "text": "mbars"
+                    }
+                }
+            }
+        },
+        "Room - Nicci": {
+            "host": "pi4",
+            "sensor": "aggregate",
+            "active": false,
+            "pos": [
+                504,
+                900
+            ],
+            "icon": "icons/aggregate.png",
+            "chart": {
+                "size": [
+                    399,
+                    583
+                ],
+                "pos": [
+                    0,
+                    0
+                ],
+                "interval": 2000.0,
+                "background_color": "#3f1372",
+                "legend_color": "#e5a50a",
+                "line_color": "#ffffff",
+                "line_width": 2,
+                "min_value": 50,
+                "max_value": 95
+            }
+        }
+    },
+    "::main::": {
+        "active": true
+    }
+}

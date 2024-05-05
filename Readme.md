@@ -22,6 +22,11 @@ From here you can open a detail window, show a chart of a data point for that se
 
 Icons can be sorted by name or type in ascending or descending direction. 
 
+## Organization
+All of the python files in the main directory are specific to the app. There are a number of library files 
+in dflib that I intend to be more generic; usable for other apps. 
+
+
 ## Installation
 Well, this is the fun bit isn't it. 
 

@@ -11,12 +11,10 @@ import argparse
 import sys
 import os
 import json
-import psutil
 import gi
-import time
-import signal
+import copy
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, GLib, GdkPixbuf
+from gi.repository import Gtk, Gdk, GLib, GdkPixbuf, Gio
 
 prog_dir = os.path.expanduser('~/sensors-gui')
 sys.path.append(os.path.expanduser('~/lib'))
@@ -24,7 +22,6 @@ sys.path.append(prog_dir)
 os.chdir(prog_dir)
 
 from dflib import widgets, rest
-from dflib.LiveChart import LiveChart
 from dflib.theme import change_theme
 from dflib.debug import debug, set_debug, dpprint, set_log_file
 import sensoredit
@@ -33,39 +30,14 @@ from about import AboutDialog
 from config import SensorsConfig
 from iconbox import IconWindow
 import chartwin
+import chartconf
+import sencaps
+import cfg
 
-program_version="2.5.0 (20 April 2024)"
+program_version="3.0.0 (28 April 2024)"
 pid_file = '/tmp/.sensors'
 
-class Toolbar(Gtk.Toolbar):
-	''' Generate a toolbar of TooButtons. To create the toolbar, 
-		a dict is passed indexed title (for tooltip) with:
-			name: a simple name
-			icon: gtk icon name
-			callback: function to call with button is clicked.
-	'''
-	def __init__(self,items):
-		Gtk.Toolbar.__init__(self,orientation=Gtk.Orientation.HORIZONTAL)
-		self.buttons = {}
-		for item,definition in items.items():
-			icon = definition['icon']
-			callback = definition['callback']
-			image = Gtk.Image.new_from_icon_name(icon,Gtk.IconSize.SMALL_TOOLBAR)
-			button = Gtk.ToolButton()
-			button.set_icon_widget(image)
-			button.set_tooltip_text(item)
-			self.buttons[item] = {
-				"icon": button,
-				"name": item,
-				"callback": callback
-			}
-			button.connect('clicked',self.on_button_click,item)
-			self.insert(button,0)
-
-	def on_button_click(self,button,item):
-		self.buttons[item]['callback'](item)
-
-class Sensors(Gtk.Window):
+class Sensors(Gtk.ApplicationWindow):
 	''' Main window
 	Present a finder like window with icons for each defined sensor.
 	Handle aaddition, editing and removal of sensors. Icons can be sorted 
@@ -78,16 +50,19 @@ class Sensors(Gtk.Window):
 		icon_dict: a dictionary formatted for IconWindow
 
 	'''
-	def __init__(self,config):
+	def __init__(self):
 		tbitems = {
-			"Hide all windows": {"icon": "go-down", 		"callback": self.minmize_all},
+			"Hide all windows": {"icon": "go-down", 		"callback": self.minimize_all},
 			"Show all windows": {"icon": "go-up", 			"callback": self.maximize_all},
-			"Configure App": 	{"icon": 'emblem-system',	"callback": self.open_config},
+			"Settings":		 	{"icon": 'emblem-system',	"callback": self.open_config},
 			"Add a  sensor":	{"icon": 'list-add', 		"callback": self.add_sensor},
 			"About Sensors": 	{"icon": 'help-about', 		"callback": self.about},
 		}
-		self.config = config
-		Gtk.Window.__init__(self, title=f"Sensors {program_version}")
+		self.use_toolbar = False
+		if sys.platform == 'linux' and not 'GNOME_SESSION_ID' in os.environ:
+			self.use_toolbar = True
+		self.config = cfg.get_config()
+		Gtk.ApplicationWindow.__init__(self,title=f"Sensors {program_version}")
 		self.actives = {}
 		self.charts = {}
 		box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -103,7 +78,7 @@ class Sensors(Gtk.Window):
 			self.icon_dict[s] = {"name": s, "icon": os.path.join(prog_dir,icon), "type": itype}
 
 		self.icon_window = IconWindow(
-			config=config,
+			config=self.config,
 			icon_dict=self.icon_dict,
 			menu_callback=self.menu_event,
 			activate_callback=self.activate_event,
@@ -114,27 +89,30 @@ class Sensors(Gtk.Window):
 			active_windows=self.actives,
 			active_charts=self.charts
 		)
-		self.toolbar = Toolbar(tbitems)
-		box.pack_start(self.toolbar,False,False,0)
+		if self.use_toolbar:
+			self.toolbar = widgets.Toolbar(tbitems,icon_size=2)
+			box.pack_start(self.toolbar,False,False,0)
 		box.pack_start(self.icon_window,True,True,0)
 		self.add(box)
 		self.connect('destroy', self.on_self_destroy)
 		self.connect('configure-event', self.on_configure_event)
-		#self.connect("window-state-event", self.on_window_state_event)
-		#self.connect("delete-event", self.on_window_state_event)
 
 		self.show_all()
 		window_icon = GdkPixbuf.Pixbuf.new_from_file('icons/humidity.png')
 		self.set_icon(window_icon)
 		GLib.timeout_add(50,self.present)
-		self.open_previous_windows()
+		GLib.timeout_add(100,self.open_previous_windows)
 		GLib.timeout_add(250,self.check_window_state)
-		signal.signal(signal.SIGUSR1,self.on_sig_user1)
+		self.connect('focus-in-event',self.on_focus_in)
+
+	def on_focus_in(self,widget,event):
+		#if event.new_window_state & Gdk.WindowState.WITHDRAWN:
+		self.present()
 
 	def on_window_state_event(self, widget, event):
 		debug('event mask: event.new_window_state & Gdk.WindowState.WITHDRAWN',event.new_window_state & Gdk.WindowState.WITHDRAWN )
 		# Check if the window is about to be minimized
-		if event.new_window_state & Gdk.WindowState.WITHDRAWN:
+		if event.new_window_state & Gdk.WindowState.WITHDRAWN and False:
 			# Restore the window
 			#self.deiconify()
 			self.present()
@@ -142,7 +120,7 @@ class Sensors(Gtk.Window):
 
 	def check_window_state(self):
 		state = self.get_window().get_state()
-		if state & Gdk.WindowState.ICONIFIED:
+		if state & Gdk.WindowState.ICONIFIED and False:
 			debug("Iconified state, lets fix it")
 			self.present()
 		GLib.timeout_add(250,self.check_window_state)
@@ -151,7 +129,7 @@ class Sensors(Gtk.Window):
 		debug("")
 		self.maximize_all()
 
-	def minmize_all(self,*args):
+	def minimize_all(self,*args):
 		''' hide all windows '''
 		for label,window in self.actives.items():
 			window.do_iconify()
@@ -188,16 +166,14 @@ class Sensors(Gtk.Window):
 				if 'active' in sensdef['chart']:
 					if sensdef['chart']['active']:
 						self.open_chart(name)
+		self.maximize_all()
+		self.show_all()
+		return False
 
 	def save_config(self):
-		''' Save program configuration '''
-		try:
-			os.unlink(config_file)
-		except:
-			pass
-		with open(config_file,'w') as f:
-			json.dump(self.config,f,indent=4)
-	
+		debug()
+		cfg.write_config()
+
 	def on_configure_event(self, widget, event):
 		''' when the window is moved, save the position '''
 		current_size = tuple(self.get_size())
@@ -217,24 +193,30 @@ class Sensors(Gtk.Window):
 		'''
 		self.show_all()
 		self.icon_window.show_all()
-		self.toolbar.show_all()
+		if self.use_toolbar:
+			self.toolbar.show_all()
 
 	def open_chart(self, item):
 			if item in self.charts:
 				self.charts[item].present()
 				return
 			stype = self.config['sensors'][item]['sensor']
+			icon = GdkPixbuf.Pixbuf.new_from_file(self.config['sensors'][item]['icon'])
 			if stype == 'cpu_usage':
 				keyname = 'usage'
 			else:
 				keyname = 'temp'
-			self.charts[item] = chartwin.ChartWindow(
+			cwin = chartwin.ChartWindow(
 				self.config,
 				name=item,
 				key=keyname,
 				data_path=data_path,
-				on_close=self.chart_done)
+				on_close=self.chart_done,
+				window_icon = icon,
+				config_callback=self.on_chart_config)
+			self.charts[item] = cwin
 			debug(f"opened chartwindow for {item}[{keyname}], charts")
+			dpprint(self.charts)
 			self.config['sensors'][item]['chart']['active'] = True
 			if item in self.actives:
 				atype=3
@@ -243,6 +225,39 @@ class Sensors(Gtk.Window):
 			self.icon_window.activate_icon(item,atype)
 			self.save_config()
 
+	def on_chart_config(self,name,cobj):
+		debug(name)
+		self.config['sensors'][name]['chart'] = cobj
+		self.on_chart_config_complete('ok', name, cobj['key'], cobj)		
+		self.save_config()
+
+	def chart_done(self,item):
+		if item in self.charts:
+			del self.charts[item] 
+		if item in self.actives:
+			atype = 1
+		else:
+			atype = 0
+		self.icon_window.activate_icon(item,atype)
+		debug(f'deactivating chart {item}')
+		self.config['sensors'][item]['chart']['active'] = False
+		self.save_config()
+	
+	def on_chart_config_complete(self, action, name, newkey, cobj):
+		debug(f'action {action} name {name} newkey {newkey}')
+		if action != 'ok':
+			return
+		cobj['key'] = newkey
+		config = cfg.get_config()
+		if not name in config['sensors']:
+			raise Exception(f'on_chart_config_complete cannot find {name} in sensors')
+		config['sensors'][name]['chart'] = cobj
+		if name in self.charts:
+			debug("reconfiguring chart")
+			self.charts[name].reconfig(newkey, cobj)
+		else:
+			debug(f'{name} not found in charts')
+		self.save_config()		
 
 	def menu_event(self, action, item):
 		''' oepn SensorEditor for selected sensor '''
@@ -262,28 +277,22 @@ class Sensors(Gtk.Window):
 				else:
 					self.actives[item].stopit()
 			elif action == 'edit':
-				sensoredit.SensorEditor(
-					name=item,
-					config=self.config,
-					callback=self.on_edit_done,
-					prog_dir=prog_dir)
+				self.open_sensor_editor(item)
 			elif action == 'remove':
 				self.remove_sensor(item)
 		else:
 			debug(f'no {item} in sensors')
+		return True
+	
 
-	def chart_done(self,item):
-		debug(f"chart for {item} complete")
-		if item in self.charts:
-			del self.charts[item] 
-		if item in self.actives:
-			atype = 1
-		else:
-			atype = 0
-		self.icon_window.activate_icon(item,atype)
-		self.config['sensors'][item]['chart']['active'] = False
-		self.save_config()
+	def open_sensor_editor(self,item):
+		sensoredit.SensorEditor(
+			name=item,
+			config=self.config,
+			callback=self.on_edit_done,
+			prog_dir=prog_dir)
 
+	
 	def on_edit_done(self, name_in, sensor_in, name, sensor):
 		'''
 		Handle return from the sensor editor. We get in the 
@@ -291,24 +300,51 @@ class Sensors(Gtk.Window):
 		and new definition. It gets saved to the config. If an open 
 		detail window is running it is notifed of the new configuration.
 		'''
+		args = [name_in, sensor_in, name, sensor]
+		keys = ['name_in','sensor_in', 'name', 'sensor']
+		for i in range(0,len(keys)):
+			arg = args[i]
+			key = keys[i]
+			if type(arg) is not str:
+				debug(f'{keys[i]} := {type(args[i])}')
+			else:
+				debug(f'{keys[i]} := {args[i]}')
+
+		debug(f"new sensor obj for {name}")
+		dpprint(sensor)
 		self.icon_window.update_icon(name_in,name,sensor['icon'])
 		del self.config["sensors"][name_in]
-		self.config['sensors'][name] = sensor
-		host = self.config['sensors'][name]['host']
-		sensor = self.config['sensors'][name]['sensor']
+		self.config['sensors'][name] = copy.deepcopy(sensor)
+		host = sensor['host']
+		sendev =sensor['sensor']
 		self.save_config()
-		if name_in in self.actives:
+		n_in_chart = name_in in self.charts
+		n_in_active = name_in in self.actives
+		if n_in_active:
 			''' get window for the old sensor name, assign it to active list 
 			and delete the old active entry. '''
-			win = self.actives[name_in]
-			self.actives[name_in] = None
-			del self.actives[name_in]
-			self.actives[name] = win
-			self.actives[name].change_sensor(name,host,sensor)
-			self.icon_window.update_icon(name_in,name,self.config['sensors'][name]['icon'])
+			if name_in != name:
+				win = self.actives[name_in]
+				self.actives[name_in] = None
+				del self.actives[name_in]
+				self.actives[name] = win
+				self.actives[name].change_sensor(name,host,sendev)
+				self.icon_window.update_icon(name_in,name,self.config['sensors'][name]['icon'])
+		elif n_in_chart:
+			if name_in != name:
+				win = self.charts[name_in]
+				self.charts[name_in] = None
+				del self.charts[name_in]
+				self.chartss[name] = win
+				#self.charts[name].change_sensor(name,host,sendev)
+			debug("reconfiguring chart")
+			key = sensor['chart']['key']
+			self.charts[name].reconfig(key, sensor['chart'])
 		else:
-			debug(f'{name} not found in actives')
-			dpprint(self.actives)
+			debug(f'[{name_in}] not found in actives or charts')
+
+		if name_in != name or sensor_in['icon'] != sensor['icon']:
+			self.icon_window.update_icon(name_in,name,self.config['sensors'][name]['icon'])
 		self.save_config()
 		debug(f'new config for {name}: {self.config["sensors"][name]}')
 
@@ -324,7 +360,7 @@ class Sensors(Gtk.Window):
 		pos = sensor['pos']
 		debug(name,sensor)
 		win = SenDetail(
-			config=config,
+			config=self.config,
 			sensor_name=sen,
 			host=host,
 			title=name,
@@ -391,8 +427,8 @@ class Sensors(Gtk.Window):
 		''' open about box '''
 		AboutDialog(
 			self,
-			config,
-			os.path.join(prog_dir,'icons','duckie.png'),
+			self.config,
+			os.path.join(prog_dir,'icons','humidity.png'),
 			program_version,
 	#		self.config['sensors']['::about::']['pos'],
 			['::main::'],
@@ -406,7 +442,9 @@ class Sensors(Gtk.Window):
 
 	def remove_sensor(self,item):
 		''' remove sensor if confirmed '''
-		if widgets.yesno(self,f"This cannot be undone. Remoe {item}?") == 'yes':
+		if widgets.yesno(self,f"This cannot be undone. Remove {item}?") == 'yes':
+			if item in self.charts:
+				self.charts[item].stopit()
 			if not item in self.config['sensors']:
 				debug(f'No such sensor {item}')
 				return
@@ -415,6 +453,7 @@ class Sensors(Gtk.Window):
 				self.actives[item].destroy()
 				del self.actives[item]
 			del self.config['sensors'][item]
+			self.save_config()
 
 
 	def add_sensor(self,*args):
@@ -526,52 +565,172 @@ class InfoWindow(Gtk.Window):
 		if event.keyval == Gdk.KEY_Escape:
 			self.destroy()
 
+class SensorsApp(Gtk.Application):
+	def __init__(self,*args):
+		self.config_window = None
+		self.sensors = Sensors()
+		#
+		# These lists of lists define the system menu items
+		# There's a list for each menu secton. Each menu item
+		# has three elements: caption, tag, callback
+		# a separator starts with '--', the other parameters
+  		# are ignored
+		# 
+		self.main_menu_items = [
+			["About Sensors","about",self.do_about],
+			["Preferences","preferences",self.sensors.open_config],
+			["Quit Sensors","quit",self.do_quit]
+		]
+		self.sensor_menu_items = [
+			["--",None,None],
+			["Get info","get-info",self.do_get_info],
+			["Edit sensor","edit",self.do_sensor_edit],
+			["--",None,None],
+			["Show detail window","open-detail",self.do_show_detail],
+			["Show chart window","show-chart",self.do_show_chart],
+			["--",None,None],
+			["Add a sensor","new",self.sensors.add_sensor],
+			["Remove sensor","delete",self.do_remove_sensor]
+		]
+		self.window_menu_items = [
+			["Hide all windows","hideall", self.sensors.minimize_all], 
+			["Show all windows","showall", self.sensors.maximize_all]
+		]
+		self.name = "Sensors GUI"
+		super().__init__(*args, application_id='com.ducksfeet.sensors-gui')
+
+	def do_remove_sensor(self,*args):
+		item = self.sensors.icon_window.get_selected_item()
+		if item:
+			self.sensors.remove_sensor(item)
+
+	def do_sensor_edit(self,*args):
+		item = self.sensors.icon_window.get_selected_item()
+		if item:
+			self.sensors.open_sensor_editor(item)
+	
+	def do_get_info(self,*args):
+		item = self.sensors.icon_window.get_selected_item()
+		if item:
+			self.sensors.get_info(item)
+
+	def do_show_detail(self,*args):
+		item = self.sensors.icon_window.get_selected_item()
+		if item:
+			self.sensors.open_detail_window(item)
+
+	def do_show_chart(self,*args):
+		item = self.sensors.icon_window.get_selected_item()
+		if item:
+			self.sensors.open_chart(item)
+
+	def do_nothing(self,*args):
+		pass
+
+	def do_about(self,*args):
+		self.sensors.about('')
+
+	def do_quit(self,*args):
+		self.quit()
+
+	def build_menu(self):
+		menu = Gio.Menu()
+		window_menu = Gio.Menu()
+		sensor_menu = Gio.Menu()
+		menu.append_submenu("Sensors", sensor_menu)
+		menu.append_submenu("Windows", window_menu)
+
+		section = window_menu
+		for caption,mclass,callback in self.window_menu_items:
+			if caption == '--':
+				sectopm = Gio.Menu()
+				window_menu.insert_section(1,None,section)
+				continue
+			item = Gio.MenuItem.new(caption,f'app.{mclass}')
+			section.append_item(item)
+
+
+		section = menu
+		for caption,mclass,callback in self.main_menu_items:
+			if caption == '--':
+				section = Gio.Menu()
+				menu.insert_section(1,None,section)
+				continue
+			item = Gio.MenuItem.new(caption,f'app.{mclass}')
+			menu.append_item(item)
+
+		section = sensor_menu
+		for caption,mclass,callback in self.sensor_menu_items:
+			if caption == '--':
+				section = Gio.Menu()
+				sensor_menu.insert_section(1,None,section)
+				continue
+			item = Gio.MenuItem.new(caption,f'app.{mclass}')
+			section.append_item(item)
+
+		return menu
+
+	def connect_actions(self):
+		actions = Gio.SimpleActionGroup()
+		for mitem in [self.main_menu_items, self.window_menu_items, self.sensor_menu_items]:
+			debug('mitem',mitem)
+			for caption, mclass, callback in mitem:
+				if caption == '--':
+					continue
+				debug(f'connecting {mclass} to {callback}')
+				if not callable(callback):
+					sys.exit(1)
+				action = Gio.SimpleAction.new(mclass)
+				action.connect('activate',callback)
+				actions.add_action(action)
+				self.add_action(action)
+
+	def do_activate(self):
+		self.connect_actions()
+		menu = self.build_menu()
+		self.set_menubar(menu)
+		self.sensors.set_show_menubar(True)
+		self.add_window(self.sensors)
+		self.sensors.show_all()
+
 if __name__ == "__main__":
 	if os.uname()[0] == 'Darwin':
 		data_path = os.path.expanduser('~/Network/sensor')
 	else:
 		data_path = '/sensor'
 	parser = argparse.ArgumentParser(
-			prog=f"Sensors {program_version}",
-			description="GUI Interface to read sensors via SensorFS RestAPI",
+			prog=f"Sensors",
+			description=f"Sensors GUI {program_version} GUI Interface to read sensors via SensorFS RestAPI",
 			epilog="A SensorFS RestAPI Example. See https://github.com/nicciniamh/sensorfs"
 		)
 	parser.add_argument('-d','--debug',action='store_true',help='turn on copious debugging messages',default=False)
 	parser.add_argument('--data-dir',type=str,default=data_path, metavar='path', help='path for sensor data')
 	parser.add_argument('--run-dir',type=str,default=prog_dir,metavar='path',help='Set runtime path')
-
 	parser.add_argument('-l','--logfile',type=str,metavar='file',default=False, help='send debug messages to file')
 	args = parser.parse_args()
 	data_path = args.data_dir
 	if not os.path.exists(data_path) or not os.path.isdir(data_path):
 		print(f"The path, {data_path}, does not exist. Cannot continue",file=sys.stderr)
 		sys.exit(1)
-	config_file = os.path.join(prog_dir,'sensors.json')
-	with open(config_file,"r") as f:
-		config = json.load(f)
+	prog_dir = args.run_dir
+	os.chdir(prog_dir)
 	set_debug(args.debug)
 	if args.debug:
 		set_debug(True)
 	if args.logfile:
 		set_log_file(args.logfile)
 	dark_mode = False
-	if 'dark_mode' in config:
-		dark_mode = config['dark_mode']
+	if 'dark_mode' in cfg.get_config():
+		dark_mode = cfg.get_config()['dark_mode']
 	change_theme(dark_mode)
 	other_instance = False
-	if os.path.exists(pid_file):
-		debug("pid file found")
-		with open(pid_file,'r') as f:
-			pid = int(f.read().strip())
-		try:
-			p = psutil.Process(pid=pid)
-			other_instance = True
-			os.kill(pid,signal.SIGUSR1)
-		except:
-			os.unlink(pid_file)
-			other_instance = False
-	with open(pid_file,'w') as f:
-		f.write(f'{os.getpid()}')
-	win = Sensors(config)
-	win.connect("destroy", Gtk.main_quit)
-	Gtk.main()
+
+	app = SensorsApp()
+	app.connect("activate", SensorsApp.do_activate)
+    
+    # Explicitly register the application
+	app_id = app.get_application_id()
+	flags = Gio.ApplicationFlags.FLAGS_NONE
+	Gio.Application.register(app)
+
+	app.run(None)

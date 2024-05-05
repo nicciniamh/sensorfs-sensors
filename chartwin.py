@@ -16,64 +16,44 @@ sys.path.append(os.path.expanduser('~/lib'))
 sys.path.append(prog_dir)
 os.chdir(prog_dir)
 
+import defaults
+import chartconf
 import boundlist
+import sencaps
 from dflib import widgets, rest, psen
 from dflib.LiveChart import LiveChart
 from dflib.theme import change_theme
 from dflib.debug import debug, set_debug, dpprint
-import sensoredit
 from sendetail import SenDetail
 from about import AboutDialog
 from config import SensorsConfig
 from iconbox import IconWindow
 
-class ColorButton(Gtk.ColorButton):
-	def __init__(self,color,cb_color_set,tag):
-		self.cb_color_set = cb_color_set
-		self.tag = tag
-		self.hex = color
-		Gtk.ColorButton.__init__(self)
-		colors = list(mpcolors.hex2color(color))
-		color = Gdk.RGBA(*colors,1.0)
-		debug(self.hex,colors,color)
-		self.set_rgba(color)
-		self.connect('color-set',self.on_color_set)
-		self.set_size_request(64,64)
-		self.set_tooltip_text('Select color')
+def format_number(number, width, precision,fill=' '):
+	width += (precision+1)
+	s = f'{number:0.{precision}f}'
+	return s
+	#return s.rjust(width,fill)
 
-	def get_color_value(self):
-		color = self.get_rgba()
-		red = int(color.red * 255)
-		green = int(color.green * 255)
-		blue = int(color.blue * 255)
-		return f'#{red:02x}{green:02x}{blue:02x}'
-
-	def on_color_set(self,widget):
-		hexstr = self.get_color_value()
-		if callable(self.cb_color_set):
-			self.cb_color_set(hexstr,self.tag)
+def get_units_information(sen, key):
+	debug(sen,key)
+	try:
+		sencap = sencaps.SensorCapabilities(sen)
+		if sencap:
+			cap =  sencap.get_cap_name('units')
+			return cap,'sencap'
+	except Exception as e:
+		debug(f'Exception getting cap for {sen}:{key}: {e}')
+		pass
+	return {key: {'text': '',
+		 	'digits': 4}},'generated'
 
 class ChartWindow(Gtk.Window):
 	def __init__(self, config, **kwargs):
 		# your initialization code remains the same
 		self.keepging = True
-		self.keyranges = {
-			'tempc': (10,35),
-			'temp': (50,95),
-			'humidity': (30,100),
-			'pressure': (950,1030),
-			'core0': (0,100),
-			'core1': (0,100),
-			'core2': (0,100),
-			'core3': (0,100),
-			'core4': (0,100),
-			'core5': (0,100),
-			'core6': (0,100),
-			'core7': (0,100),
-			'cputemp': (0,100),
-			'usage': (0,100),
-			'vmem': (0,100)
-		}
+		self.reconfig_timer = False
+		self.active = True
 		self.iconified = False
 		self._initialized = False
 		self.interval = 1000
@@ -84,13 +64,18 @@ class ChartWindow(Gtk.Window):
 		self.background_color = kwargs.get('background_color','black')
 		self.legend_color = kwargs.get('legend_color','white')
 		self.line_color = kwargs.get('line_color','blue')
-		self.min_value = kwargs.get('min_value',self.keyranges[self.key][0])
-		self.max_value = kwargs.get('min_value',self.keyranges[self.key][1])
 		self.data_path = kwargs.get('data_path')
 		self.on_close = kwargs.get('on_close')
+		self.window_icon = kwargs.get('window_icon',None)
+		self.config_callback = kwargs.get('config_callback')
 		self.chartdef_backup = None
 		self.color_buttons = {}
 		self.size = (0,0)
+		self.update_timeout = None
+		self.config_window = None
+		self.units = None
+		self.min_value = -1
+		self.max_value = -1
 		if not self.name:
 			raise AttributeError('name must be supplied')
 
@@ -100,43 +85,53 @@ class ChartWindow(Gtk.Window):
 		if not self.name in self.config['sensors']:
 			raise AttributeError('name must be a valid sensor entry')
 
-		host = self.config['sensors'][self.name]['host']
-		sen = self.config['sensors'][self.name]['sensor']
-		if not 'chart' in self.config['sensors'][self.name]:
-			chart_obj = {
-				'size': 			(0,0),
-				'pos': 				(0,0),
-				'keyranges':	 	self.keyranges,
-				'background_color':	'#000000',
-				'legend_color': 	'#A0A0A0',
-				'line_color':		'#0000ff',
-				'min_value':		self.keyranges[self.key][0],
-				'max_value': 		self.keyranges[self.key][1],
-			}
-			debug(f'No chart in {self.name} creating new object:')
-			dpprint(chart_obj)
-			self.config['sensors'][self.name]['chart'] = chart_obj
+		self.host = self.config['sensors'][self.name]['host']
+		self.sen = self.config['sensors'][self.name]['sensor']
+		if 'chart' in self.config['sensors'][self.name]:
+			self.chart_obj = self.config['sensors'][self.name]['chart']
+		else:
+			self.chart_obj = defaults.chart
+
 		self.sensor = psen.PsuedoSensor(
 			base_path = self.data_path,
-			server = self.config['server'],
-			host=host,
-			sensor=sen)
-		#self.kavail = []
-		sdata = self.sensor.read()
-		self.kavail = [ k for k in sdata.keys() if k not in ['description','loadavg','modinfo','name','time','boot_time']]
-		self.kavail.sort()
-		Gtk.Window.__init__(self,title=self.name)
+			server='Some Server',
+			host=self.host,
+			sensor=self.sen)
+
+		self.sencap = sencaps.SensorCapabilities(self.sen).get_cap()
+		self.kavail = list(self.sencap['units'].keys())
+
+		Gtk.Window.__init__(self,title=self.name,icon=self.window_icon)
 		self.connect('destroy',self.stopit)
-		self.data = boundlist.BoundList(50)
+		self.data = boundlist.BoundList(30)
 		self.background_color = '#000000'
 		self.legend_color = '#ffffff'
 		self.line_color = '#0000ff'
-		if 'chart' in self.config['sensors'][self.name]:
-			for k,v in self.config['sensors'][self.name]['chart'].items():
-				#debug(f'{self.name}::{k} = {v}')
-				setattr(self,k,v)
+		self.paused = False
+
+		for k,v in self.chart_obj.items():
+			setattr(self,k,v)
+
+		if self.units:
+			if not self.key in self.units:
+				self.units = None
+		if not self.units:
+			self.chart_obj['units'] = self.sencap['units']
+		self.units = self.chart_obj['units']
+
+		if 'min_value' in self.chart_obj:
+			self.min_value = self.chart_obj['min_value']
 		else:
-			debug("no chart in",self.config['sensors'][self.name])
+			self.min_value = self.sencap['ranges'][self.key][0]
+
+		if 'max_value' in self.chart_obj:
+			self.max_value = self.chart_obj['max_value']
+		else:
+			self.max_value = self.sencap['ranges'][self.key][1]
+
+		self.chart_obj['min_value'] = self.min_value
+		self.chart_obj['max_value'] = self.max_value
+
 		self.chart = LiveChart(
 			500,300,
 			background_color=self.background_color,
@@ -148,38 +143,41 @@ class ChartWindow(Gtk.Window):
 			relative_scale=False)
 
 
-		self.connect('destroy', self.stopit)
 		self.data = boundlist.BoundList(50)
-		#self.background_color = '#000000'
-		#self.legend_color = '#ffffff'
-		#self.line_color = '#0000ff'
-		# Create a grid layout container
 		grid = Gtk.Grid()
 		self.add(grid)
 
 		style = '''.current { font-family: "Arial"; font-size: 16px; padding: 10px} '''
 
 		# Create an expander with settings box
-		self.expander = Gtk.Expander(label="Chart Settings")
-		self.expander.connect("notify::expanded", self.on_expander_changed)
-		elabel = Gtk.Label()
-		elabel.set_markup('Chart Settings')
-		widgets._widget_set_css(elabel,'current',style)
-		self.expander.set_resize_toplevel(True)
-		cbox = self.get_config_box()
-		self.expander.add(cbox)
-		grid.attach(self.expander, 0, 0, 1, 1)
-
+		tbitems = {
+			"Clear chart Data": {"icon": 'edit-delete',				"callback": self.on_clear},
+			"Pause chart":		{"icon": 'media-playback-pause',		"callback": self.on_pause},
+			"Chart settings":	{"icon": 'emblem-system',			"callback": self.open_config},
+		}
+		self.toolbar = widgets.Toolbar(tbitems,icon_size=Gtk.IconSize.MENU)
+		grid.attach(self.toolbar,0,0,1,1)
+		debug('Set the controls for the heart of the sun')
+		dpprint(self.units)
 		# Create a box for the labels
 		label_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		cap = Gtk.Label()
-		cap.set_markup('<span size="large">Last Reading</span>')
+		self.vcap = Gtk.Label()
+		self.vcap.set_markup(f'<span size="large">{self.key}, last reading</span>')
 		self.vlabel = Gtk.Label(label="<span background='black' color='#00ff00'></span>", use_markup=True)
-		widgets._widget_set_css(cap,'current',style)
+		self.vlabel.set_width_chars(10)
+		self.vlabel.set_alignment(1.0, 0.5) 
+		self.vcap.set_alignment(0.0,0.5)
+		widgets._widget_set_css(self.vcap,'current',style)
 		widgets._widget_set_css(self.vlabel,'current',style)
 
-		label_box.pack_start(cap, False, False, 0)
+		self.rate = Gtk.Label()
+		self.rate.set_markup(f'<span size="large">Read once per {int(self.interval/1000)} second(s)</span>')
+		widgets._widget_set_css(self.rate,'current',style)
+		label_box.pack_start(self.vcap, False, False, 0)
 		label_box.pack_start(self.vlabel, False, False, 0)
+		self.vunits = Gtk.Label(label=self.units[self.key]['text'])
+		label_box.pack_start(self.vunits, False, False, 0)
+		label_box.pack_start(self.rate, False, False, 0)
 		grid.attach(label_box, 0, 1, 1, 1)
 
 		# Attach the chart to the grid
@@ -188,24 +186,128 @@ class ChartWindow(Gtk.Window):
 		# Set chart data and other configurations
 		if 'chart' in self.config['sensors'][self.name]:
 			cobj = self.config['sensors'][self.name]['chart']
-			#if 'size' in cobj:
-			#	self.size = cobj['size']
-			#	debug(f"setting size: {cobj['size']}")
-			#	#self.resize(*cobj['size'])
 			if 'pos' in cobj:
 				self.pos = cobj['pos']
 				debug(f"setting pos: {cobj['pos']}")
 				self.move(*cobj['pos'])
 
+		if self.interval <= 100:
+			self.interval = 100;
 		self.data.append(self.sensor.read()[self.key])
 		self.chart.set_data(self.data)
-		self.set_title(f'{self.name} - {self.key}')
+		self.set_title_status()
 		self.update()
 		self.show_all()
 		self._trigger()
+		self.connect('destroy', self.stopit)
 		self.connect('configure-event', self.on_configure)
 		self.set_resizable(False)
+		GLib.timeout_add(100, self._set_initialized)
+		self.reconfig(self.key,self.chart_obj	)
+		self.reset_timer()
+
+	def on_pause(self,*args):
+		if self.paused:
+			self.reset_timer()
+			self.paused = False
+		else:
+			self.stop_timer()
+			self.paused = True
+		self.set_title_status()
+		self.update(False)
+
+	def on_clear(self,*args):
+		self.data = boundlist.BoundList(50)
+		self.update(False)
+
+	def reset_timer(self):
+		ms = self.interval
+		debug(ms)
+		if ms < 100:
+			ms = 100
+		if self.update_timeout:
+			GLib.source_remove(self.update_timeout)
+		self.update_timeout = GLib.timeout_add(ms,self._trigger)
+	
+	def stop_timer(self):
+		debug()
+		if self.update_timeout:
+			GLib.source_remove(self.update_timeout)
+			self.update_timeout = None
+			
+
+	def _construct_cobj(self):
+		cobj = {}
+		cobj['background_color'] = self.background_color
+		cobj['legend_color'] = self.legend_color
+		cobj['line_color'] = self.line_color
+		cobj['line_width'] = self.line_width
+		cobj['interval'] = self.interval
+		cobj['min_value'] = self.min_value
+		cobj['max_value'] = self.max_value
+		cobj['units'] = self.units
+		cobj["key"] = self.key
+		return cobj	
+
+	def _resolve_cobj(self,cobj):
+		self.background_color = cobj['background_color']
+		self.legend_color = cobj['legend_color']
+		self.line_color = cobj['line_color']
+		self.line_width = cobj['line_width']
+		self.interval = cobj['interval']
+		self.min_value = cobj['min_value']
+		self.max_value = cobj['max_value']
+		self.units = cobj['units']
+		self.key = cobj['key']
+		return cobj
+			
+	def open_config(self,*args):
+		if self.config_window:
+			self.config_window.present()
+			return
+		self.stop_timer()
+		self.config_window = chartconf.ChartConfig(
+			self._construct_cobj(),
+			on_complete=self.on_chart_config_complete,
+			key=self.key,
+			sensor_name = self.name,
+			sensor_type = self.sen
+		)
+		self.config_window.move(*self.position())
+
+	def reconfig(self, newkey, cobj):
+		debug()
+		self.chart_obj = self._resolve_cobj(cobj)
+		self.chart.set_scale(self.min_value,self.max_value,False)
+		self.chart.set_colors(
+			line_color=self.line_color,
+			legend_color=self.legend_color,
+			background_color=self.background_color
+			)
+		self.chart.set_line_width(self.line_width)
+		if newkey != self.key:
+			self.data = boundlist.BoundList(50)
+		self.key = newkey
+		debug("Calling save config")
+		self.cobj = cobj
+
+	def on_chart_config_complete(self,action, name, newkey, cobj):
+		del self.config_window
+		self.config_window = None
+		debug(f'name [{name}],newkey [{newkey}], action [{action}])')
+		if action == 'ok':
+			debug('saving values and setting variables')
+			self.reconfig(newkey,cobj)
+			self.save_config()		
+		self.set_title_status()
+		self.reset_timer()
+
+	def _set_initialized(self):
+		debug()
 		self._initialized = True
+		self.active = True
+		self.save_config()
+		return False
 
 	def do_iconify(self,*args):
 		'''
@@ -236,199 +338,77 @@ class ChartWindow(Gtk.Window):
 				x=0
 		return (x,y)
 
-	def move(self,x,y):
+	def xmove(self,x,y):
 		'''
 		move the window
 		'''
-		return super().move(*self._xyfixup(x,y))
+		return super().move(x,y)
+		#return super().move(*self._xyfixup(x,y))
 
+	def set_title_status(self):
+		self.rate.set_markup(f'Interval {int(self.interval/1000)}')
+		if len(self.data):
+			samples = f' - {len(self.data)} samples'
+		else:
+			samples = ''
+		if self.paused:
+			icon = 'media-playback-start'
+			tooltip = 'Resume chart'
+			paused = "(paused)"
+		else:
+			paused = ""
+			icon = 'media-playback-pause'
+			tooltip = 'Pause chart'
+		self.toolbar.change_button_image('Pause chart',icon,tooltip)
+		self.set_title(f'{self.name} - {self.key} {paused}{samples}')
+		
 
-	def get_config_box(self):
-		box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		ibox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		ibox.pack_start(Gtk.Label(label='Update (ms)'),True,True,0)
-		button = Gtk.SpinButton.new_with_range(500,36000,500)
-		button.set_tooltip_text('Select the interval for updating the chart')
-		button.set_value(self.interval)
-		button.connect('value-changed',self.on_interval_change)
-		button.connect('changed',self.on_interval_change)
-		ibox.pack_start(button,True,True,0)
-		rbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		rbox.pack_start(Gtk.Label(label='Range'),True,True,0)
-		self.range_set = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		self.range_set.pack_start(Gtk.Label(label='Min'),True,True,0)
-		self.min_entry = Gtk.Entry()
-		self.min_entry.connect('changed',self.on_range_entry_changed,'min')
-		self.min_entry.set_tooltip_text('minimum value to  show on chart')
-		self.range_set.pack_start(self.min_entry,True,True,0)
-		self.range_set.pack_start(Gtk.Label(label='Max'),True,True,0)
-		self.max_entry = Gtk.Entry()
-		self.max_entry.connect('changed',self.on_range_entry_changed,'max')
-		self.max_entry.set_tooltip_text('maximum value to  show on chart')
-		self.range_set.pack_start(self.max_entry,True,True,0)
-		self.range_set.set_sensitive(self.chart.relative_scale==False)
-		self.min_entry.set_text(f'{self.min_value}')
-		self.max_entry.set_text(f'{self.max_value}')
-
-		rbox.pack_start(self.range_set,True,True,0)
-		cbox_outer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		cbox_outer.pack_start(Gtk.Label(label='Colors'),True,True,0)
-		cbox_outer.pack_start(
-			self.create_color_entry(self.background_color,'Area','background_color'),True,True,0
-		)
-		cbox_outer.pack_start(
-			self.create_color_entry(self.legend_color,'Legend','legend_color'),True,True,0
-		)
-		cbox_outer.pack_start(
-			self.create_color_entry(self.line_color,'Line','line_color'),True,True,0
-		)
-		scbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		adjustment = Gtk.Adjustment(
-			value = self.line_width,
-			lower = 1, 
-			upper = 10,
-			step_increment = 1,
-			page_increment = 1,
-			page_size = 0)
-		self.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adjustment)
-		self.scale.set_digits(0)
-		self.scale.set_range(1, 10)  # Set the range of the scale
-		self.scale.set_value(self.line_width)  # Set the initial value
-		self.scale.set_size_request(50, -1)  # Set the width of the scale
-		self.scale.set_tooltip_text('slide to change size of chart lines')
-		scbox.pack_start(Gtk.Label(label='Line Width'),True,True,0)
-		scbox.pack_start(self.scale,True,True,0)
-		rbox.pack_start(scbox,True,True,0)
-		box.pack_start(ibox,True,True,0)
-		box.pack_start(rbox,True,True,0)
-		box.pack_start(cbox_outer,True,True,0)
-		bbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-		ok_button = Gtk.Button(label='Ok')
-		ok_button.connect('clicked',self.on_ok_cancel_clicked,'ok')
-		cancel_button = Gtk.Button(label='Cancel')
-		cancel_button.connect('clicked',self.on_ok_cancel_clicked,'cancel')
-		bbox.pack_start(Gtk.Label(label='Save Changes'),True,True,0)
-		bbox.pack_start(ok_button,True,True,0)
-		bbox.pack_start(cancel_button,True,True,0)
-		self.keysel = widgets.ListBox(self.kavail,onSelect=self.change_key)
-		self.keysel.set_tooltip_text('Select item to chart')
-		keybox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		keybox.pack_start(Gtk.Label(label='Value to chart'),True,True,0)
-		keybox.pack_start(self.keysel,True,True,0)
-		self.keysel.select_row_by_label(self.key)
-		box.pack_start(keybox,True,True,0)
-		box.pack_start(bbox,True,True,0)
-		return box
-
-	def on_ok_cancel_clicked(self,widget,action):
-		if action == 'ok':
-			try:
-				mv = float(self.min_entry.get_text())
-				xv = float(self.max_entry.get_text())
-			except:
-				widgets.ErrorDialog('Error','Range values need to be numbers',None)
-			debug(f'mv/xv',mv,xv)
-			self.min_value = mv
-			self.max_value = xv
-			self.background_color = self.color_buttons['Area'].get_color_value()
-			self.line_color = self.color_buttons['Line'].get_color_value()
-			self.legend_color = self.color_buttons['Legend'].get_color_value()
-			self.line_width = self.scale.get_value()
-			self.key = self.keysel.get_selected_item()
-			self.keyranges[self.key] = (mv,xv)
-			self.chart.set_line_width(self.line_width)
-			self.chart.set_colors(
-				line_color=self.line_color,
-				legend_color=self.legend_color,
-				background_color=self.background_color
-				)
-			self.chart.set_scale(*self.keyranges[self.key],False)
-			debug('scale: ',self.keyranges[self.key])
-			self.save_config()
-		self.expander.set_expanded(False)
-
-	def on_scale_changed(self,widget):
-		self.line_width = int(widget.get_value())
-		self.chart.set_line_width(self.line_width)
-
-	def on_expander_changed(self,widget,event):
-		pass
+	def position(self, new_position=None):
+		if type(new_position) is tuple:
+			self.move(*new_position)
+		return tuple(self.get_window().get_position())
 
 	def on_configure(self,widget,event):
-		self.pos = tuple(self.get_window().get_position())
-		if not self.expander.get_expanded():
-			self.size = tuple(self.get_size())
-
-	def on_range_entry_changed(self,widget,tag):
-		return
-		try:
-			value = float(widget.get_text())
-		except:
-			return
-		if not tag in ['min','max']:
-			return
-		debug("setattr(self,f'{}_value',{})".format(tag,value))
-		setattr(self,f'{tag}_value',value)
-		self.keyranges[self.key] = (self.min_value,self.max_value)
-		self.chart.set_scale(self.min_value,self.max_value,False)
+		self.pos = self.position()
 		self.save_config()
-		debug(f'new range is {self.min_value}-{self.max_value}')
 
-	def on_interval_change(self,widget,*args):
-		self.interval = widget.get_value()
-		debug("new interval",self.interval)
-
-	def create_color_entry(self,color,text,tag):
-		box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-		label = Gtk.Label(label=text)
-		button = ColorButton(color,None,None)
-		self.color_buttons[text] = button
-		box.pack_start(label,True,True,0)
-		box.pack_start(button,True,True,0)
-		return box
-
-	def set_a_color(self, color, tag):
-		try:
-			if getattr(self,tag):
-				setattr(self,tag,color)
-				setattr(self.chart,tag,color)
-		except:
-			debug(f"Invalid color/tag combination {color}/{tag}")
-
-	def change_key(self,widget, key):
-		if key == self.key:
-			return
-		self.key = key
-		if not key in self.keyranges:
-			mnv,mxv = (0,100)
-		else:
-			mnv,mxv = self.keyranges[self.key]
-		self.data = boundlist.BoundList(50)
-		self.min_entry.set_text(f'{mnv}')
-		self.max_entry.set_text(f'{mxv}')
-		self.chart.set_scale(mnv,mxv)
-		self.min_value = mnv
-		self.max_value = mxv
-		self.set_title(f'{self.name} - {self.key}')
-
-
-	def update(self):
+	def update(self, read_data=True):
+		chart = self.config['sensors'][self.name]
 		if not self.key:
 			debug("No key set")
 			return
-		sdata = self.sensor.read()
-		if not sdata or 'error' in sdata:
-			debug("error, sdata",sdata)
-			return
-		value = sdata[self.key]
-		self.vlabel.set_markup(f'<span background="black" color="#00ff00">{value:>8.4f}</span>')
-		self.data.append(value,)
+		if read_data:
+			sdata = self.sensor.read()
+			if not sdata or 'error' in sdata:
+				debug("error, sdata",sdata)
+				return
+			value = v = sdata[self.key]
+			if not self.key in self.units:
+				u  = ''
+				p = 4
+			else:
+				p = self.units[self.key]['digits']
+				u = self.units[self.key]['text']
+			v = format_number(value,5,p)
+			self.vlabel.set_text(v)
+			self.vcap.set_text(f'Charted Value {self.key}')
+			self.vunits.set_text(u)
+			self.data.append(value)
+		else:
+			self.vlabel.set_text('waiting...')
+			self.vunits.set_text('')
+		self.set_title_status()
 		self.chart.set_data(self.data)
 
 	def _trigger(self):
+		if self.reconfig_timer:
+			self.reset_timer()
+			return False
 		if self.keepging:
 			self.update()
-			GLib.timeout_add(self.interval,self._trigger)
+			return True
+		else:
+			return False
 
 	def stopit(self,*args):
 		self.save_config()
@@ -439,52 +419,37 @@ class ChartWindow(Gtk.Window):
 		self.destroy()
 
 	def save_config(self):
-		config_file = 'sensors.json'
 		if not self._initialized:
-			debug("changes not save, class isn't initialized yet")
 			return
-		vals = [
-			'keyranges',
-			'key',
-			'size',
-			'pos',
-			'interval',
-			'background_color',
-			'legend_color',
-			'line_color',
-			'line_width',
-			'min_value',
-			'max_value'
-		]
-		if not 'chart' in self.config['sensors'][self.name]:
-			self.config['sensors'][self.name]['chart'] = {}
-
-		if not 'keyranges' in self.config['sensors'][self.name]['chart']:
-			self.config['sensors'][self.name]['chart']['keyranges'] = self.keyranges
-		else:
-			self.min_value,self.max_value = self.config['sensors'][self.name]['chart']['keyranges'][self.key]
-		size = self.size
-		pos = self.pos
-		self.config['sensors'][self.name]['chart']['size'] = size
-		self.config['sensors'][self.name]['chart']['pos'] = pos
-		for v in vals:
-			iv = getattr(self,v)
-			if type(v) is set or type(v) is tuple:
-				debug(f'VSET {v} will be {tuple(v)}')
-				v = tuple(v)
-			debug(f'{v} = {iv}')
-			self.config['sensors'][self.name]['chart'][v] = getattr(self,v)
-
-		tmpfile = f'.sensors-{os.getpid()}.tmp'
-		with open(tmpfile,'w') as f:
-			json.dump(self.config,f,indent=4)
-		os.rename(tmpfile,config_file)
+		if callable(self.config_callback):
+			keys_to_save = [
+				'active',
+				'background_color',
+				'key',
+				'interval',
+				'legend_color',
+				'line_color',
+				'line_width',
+				'min_value',
+				'max_value',
+				'pos',
+				'units',
+			]
+			cobj = {key: self.__dict__[key] for key in keys_to_save}
+			debug("sending config data to app for save")
+			self.config_callback(self.name,cobj)
 
 if __name__ == "__main__":
 	from dflib.theme import change_theme
+	from dflib.debug import set_debug
+	set_debug(True)
 	if len(sys.argv) != 3:
-		print(f"usage: {sys.argv[0]} sensor name key",file=sys.stderr)
-		sys.exit(1)
+		key = 'temp'
+		name = 'Sensor - bmp280(1)'
+	else:
+		name = sys.argv[1]
+		key = sys.argv[2]
+
 	try:
 		with open('sensors.json') as f:
 			config = json.load(f)
@@ -493,12 +458,18 @@ if __name__ == "__main__":
 		sys.exit(1)
 	
 	change_theme(config['dark_mode'])
-	name = sys.argv[1]
-	key = sys.argv[2]
 
 	if name in config['sensors']:
-		#if 'chart' in config['sensors'][name]:
-		win = ChartWindow(config,name=name,key=key,data_path='/Users/nicci/Network/sensor')
+		cobj = config['sensors'][name]['chart']
+		del cobj['keyranges']
+		del cobj['units']
+		debug("cobj")
+		dpprint(cobj)
+		win = ChartWindow(
+			config,
+			name=name,
+			key=key,
+			data_path='/Users/nicci/Network/sensor')
 		win.connect('destroy',Gtk.main_quit)
 		win.show_all()
 		win.present()

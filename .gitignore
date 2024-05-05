@@ -7,3 +7,4 @@ sensor.icns
 .DS_Store
 sensors.code-workspace
 sensors.json
+*test.py

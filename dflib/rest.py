@@ -34,8 +34,8 @@ class RestClient(object):
 
 		self.setup(**kwargs)
 
-		if not self.server or not self.sensor or not self.host:
-			raise ValueError('neither sever nor host specified')
+		if not self.server or not self.host:
+			raise ValueError('neither server nor host specified')
 
 	def setup(self,**kwargs):
 		'''

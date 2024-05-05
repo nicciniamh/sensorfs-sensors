@@ -134,6 +134,7 @@ def dpprint(obj,*args,**kwargs):
 		cs = f'{file}:{line} {caller}'
 
 		caller_text = f'{gc}->{cs}'
+		tag = '\x1b[1;34;40mDEBUG\x1b[0m'
 		strings = pprint.pformat(obj,*args,**kwargs).split('\n')
 		for s in strings:
-			_output(caller,'\x1b[1;34;40mDEBUG\x1b[0m',s)
+			_output(caller_text, tag, s)

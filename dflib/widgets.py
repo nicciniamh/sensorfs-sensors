@@ -15,10 +15,11 @@ Included are:
 
 import os
 import gi
+import re
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, Pango, GLib, GdkPixbuf
+from gi.repository import Gtk, Gdk, Pango, GLib, GdkPixbuf, GObject
 
-from dflib.debug import debug
+from dflib.debug import debug, dpprint
 
 def yesno(parent,message):
 	message = message.split('\n')
@@ -55,6 +56,163 @@ def _widget_set_css(widget, classname, css_data):
 	context.add_class(classname)
 	context.add_provider(css_provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
+class FixedSpinButton(Gtk.Box):
+	'''
+	A spinbutton type class that creates the buttons with +/- and the value field - read only. 
+	digits are displayed with a fixed size. 
+	kwargs: value - initial value 
+			vrange - range of allowable values
+			change_callback - callable to be passed the new value
+	'''
+	def __init__(self, **kwargs):
+		self.vrange = (0,100)
+		self.change_callback = None
+		self.value = 0
+		self.editable = False
+		self.digits = 2
+		self.orientation = Gtk.Orientation.VERTICAL
+		for k,v in kwargs.items():
+			if k in ['vrange','value','change_callback','editable','digits']:
+				setattr(self,k,v)
+		dpprint(dict(kwargs))
+		Gtk.Box.__init__(self, orientation=self.orientation)
+		self.plus = Gtk.Button()
+		self.strings = []
+		debug('vrange',self.vrange)
+		for i in range(*self.vrange):
+			self.strings.append(self.format_string(i))
+		self.index = self.strings.index(self.format_string(self.value))
+		if self.editable:
+			self.label = Gtk.Entry()
+			self.label.set_text(self.strings[self.index])
+			self.label.connect('changed',self.on_entry_changed)
+		else:
+			self.label = Gtk.Label(label=self.strings[self.index])
+		_widget_set_css(self.label,'sblabel','.sblabel, .sblabel entry, .sblabel label {font-weight: bold; background: blue; color: white; padding: 10px;}')
+		plus = Gtk.Button()
+		plus.set_image(Gtk.Image.new_from_icon_name('list-add',Gtk.IconSize.SMALL_TOOLBAR))
+		plus.connect('clicked',self._on_value_changed,1)
+		minus = Gtk.Button()
+		minus.set_image(Gtk.Image.new_from_icon_name('list-remove',Gtk.IconSize.SMALL_TOOLBAR))
+		minus.connect('clicked',self._on_value_changed,-1)
+		self.pack_start(plus,True,True,0)
+		self.pack_start(self.label,True,True,0)
+		self.pack_start(minus,True,True,0)
+		self._update_text()
+
+	def on_entry_changed(self,widget,*args):
+		v = widget.get_text()
+		if v:
+			v = re.sub('[^0-9]','',v)
+			v = int(v)
+			if v > self.vrange[1]:
+				v=self.vrange[1]
+			widget.set_text(f'{v}')
+
+	def format_string(self,int_value):
+		if type(int_value) is not int:
+			int_value = int(int_value)
+		formatted = f'{int_value:0{self.digits}d}'
+		return formatted
+	
+	
+	def _on_value_changed(self, widget, adj):
+		self.index += adj
+		if self.index < 0:
+			self.index = len(self.strings)-1
+		if self.index >= len(self.strings):
+			self.index = 0
+		self._update_text()
+		if callable(self.change_callback):
+			self.change_callback(self.strings[self.value])
+
+	def _update_text(self):
+		self.label.set_text(self.strings[self.index])
+		self.show_all()
+
+	def get_text(self):
+		return self.strings[self.index]
+
+	def set_value(self,value):
+		index = self.strings.index(f'{value:02d}')
+		return self.strings[self.strings[self.index]]
+		self._update_text()
+
+	def get_value(self):
+		return f'{self.strings[self.index]:02d}'
+	
+	def get_value_as_int(self):
+		return int(self.strings[self.index])
+
+class TimeEntry(Gtk.Box):
+	'''
+	TimeEntry - provides for entering a time value as hours mminutes seconds 
+	kwats:
+		seconds 	- the time value in seconds to pre-load
+		on_change 	- callback when value changes, passes back time value
+	'''
+	def __init__(self,**kwargs):
+		def _make_label(text):
+			l = Gtk.Label()
+			l.set_markup(text)
+
+			css_data = ".tilabel { padding-left: 15px;padding-right: 15px;}"
+			_widget_set_css(l,'tilabel',css_data)
+			return l
+		self.hours = 0
+		self.minutes = 0
+		self.seconds = 0
+		self.on_change = 0
+		for k,v in kwargs.items():
+			if k in ['seconds', 'on_change']:
+				setattr(self,k,v)
+			else:
+				raise AttributeError(f'{k} is not a valid argument')
+
+		Gtk.Box.__init__(self)
+		if self.seconds:
+			hours = self.seconds // 3600
+			minutes = (self.seconds % 3600) // 60
+			seconds = self.seconds % 60
+		else:
+			hours = minutes = seconds = 0
+	
+		debug(hours,minutes,seconds,self.seconds)
+		grid = Gtk.Grid()
+		self.hours = FixedSpinButton(value=hours, 		vrange=(0,23), 	orientation=Gtk.Orientation.VERTICAL)
+		self.minutes = FixedSpinButton(value=minutes, 	vrange=(0,59),	orientation=Gtk.Orientation.VERTICAL)
+		self.seconds = FixedSpinButton(value=seconds, 	vrange=(0,59),	orientation=Gtk.Orientation.VERTICAL)
+
+		grid.attach(_make_label('Hours'),0,0,1,1)
+		grid.attach(_make_label('Minutes'),1,0,1,1)
+		grid.attach(_make_label('Seconds'),2,0,1,1)
+		grid.attach(self.hours, 0,1,1,1)
+		grid.attach(self.minutes,1,1,1,1)
+		grid.attach(self.seconds,2,1,1,1)
+		self.add(grid)
+
+		for w in [self.hours, self.minutes, self.seconds]:
+			_widget_set_css(w, 'ce', '.ce input, .ce entry {padding: 10px; background-color: #0000ff; color: white;}')
+		_widget_set_css(self, 'foo', '.foo {padding: 10px;}')
+
+	def format_spin(self, spin_button, *args):
+		value = spin_button.get_value_as_int()
+		spin_button.set_text(f'{value:02d}')
+		#return True
+
+
+	def get_value(self):
+		(hours,minutes,seconds) =[o.get_value_as_int() for o in [self.hours, self.minutes, self.seconds]]
+		debug(hours,minutes,seconds)
+		hours *= 3600
+		minutes *= 60
+		value = hours + minutes + seconds
+		debug(value)
+		return value
+
+	def on_value_changed(self, widget, *args):
+		if callable(self.on_change):
+			self.on_change(self.get_value())
 
 class MessageDialog(Gtk.Window):
 	'''
@@ -552,3 +710,153 @@ class ErrorDialog(Gtk.Window):
 		box.pack_start(button,True,True,0)
 		self.add(box)
 		self.show_all()
+
+class StringSpinButton(Gtk.Box):
+	'''
+		Create a spin button for strings
+	'''
+	def __init__(self, strings,change_callback=None):
+		Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
+		self.change_callback = change_callback
+		self.strings = strings
+		self.plus = Gtk.Button()
+		self.value = 0
+		self.label = Gtk.Label(label=self.strings[0])
+		_widget_set_css(self.label,'sblabel','.sblabel {background: blue; color: white;}')
+		plus = Gtk.Button()
+		plus.set_image(Gtk.Image.new_from_icon_name('list-add',Gtk.IconSize.SMALL_TOOLBAR))
+		plus.connect('clicked',self._on_value_changed,1)
+		minus = Gtk.Button()
+		minus.set_image(Gtk.Image.new_from_icon_name('list-remove',Gtk.IconSize.SMALL_TOOLBAR))
+		minus.connect('clicked',self._on_value_changed,-1)
+		self.pack_start(minus,True,True,0)
+		self.pack_start(self.label,True,True,0)
+		self.pack_start(plus,True,True,0)
+		self._update_text()
+
+	def _on_value_changed(self, widget, adj):
+		self.value += adj
+		if self.value < 0:
+			self.value = len(self.strings)-1
+		if self.value >= len(self.strings):
+			self.value = 0
+		self._update_text()
+		if callable(self.change_callback):
+			self.change_callback(self.strings[self.value])
+
+	def _update_text(self):
+		self.label.set_text(self.strings[self.value])
+		self.show_all()
+
+	def get_text(self):
+		return self.strings[self.value]
+
+	def set_value(self,value,strings=None):
+		if strings:
+			del self.strings
+			self.strings = strings
+		self.value = self.strings.index(value)
+		self._update_text()
+		debug(self.strings, self.strings[self.value],value,self.value)
+		return self.strings[self.value]
+	
+	def set_content_width(self,width):
+		self.label.set_width_chars(width)
+
+
+
+class Toolbar(Gtk.Toolbar):
+	''' Generate a toolbar of TooButtons. To create the toolbar, 
+		a dict is passed indexed title (for tooltip) with:
+			name: a simple name
+			icon: gtk icon name
+			callback: function to call with button is clicked.
+	'''
+	def __init__(self,items,**kwargs):
+		self.icon_size = kwargs.get('icon_size',Gtk.IconSize.SMALL_TOOLBAR)
+		self.orientation = kwargs.get('orientation',Gtk.Orientation.HORIZONTAL)
+		self.buttons = {}
+		Gtk.Toolbar.__init__(self,orientation=self.orientation)
+		for item,definition in items.items():
+			icon = definition['icon']
+			callback = definition['callback']
+			image = Gtk.Image.new_from_icon_name(icon,self.icon_size)
+			button = Gtk.ToolButton()
+			button.set_icon_widget(image)
+			button.set_tooltip_text(item)
+			self.buttons[item] = {
+				"icon": button,
+				"name": item,
+				"callback": callback
+			}
+			button.connect('clicked',self.on_button_click,item)
+			self.insert(button,0)
+
+	def change_button_image(self, item, image, tooltip=None):
+		button = self.buttons[item]
+		new_image = Gtk.Image.new_from_icon_name(image,self.icon_size)
+		button['icon'].set_icon_widget(new_image)
+		if tooltip:
+			button['icon'].set_tooltip_text(tooltip)
+		self.show_all()
+
+	def on_button_click(self,button,item):
+		self.buttons[item]['callback'](item)
+
+class SimpleCombo(Gtk.ComboBox):
+	'''
+	This class creates a widget based on Gtk.ComboBox. It accetps a list of strings and is 
+	preloaded.
+	'''
+	def __init__(self, items, **kwargs):
+		self.on_change = kwargs.get('on_change')
+		self.selected = kwargs.get('selected')
+		self.items = items
+		liststore = Gtk.ListStore(str)
+		Gtk.ComboBox.__init__(self,model=liststore)
+		for item in items:
+			liststore.append([item])
+
+		# Creating a combobox and setting its model
+		self.connect("changed", self._on_combo_changed)
+
+		# Creating a cell renderer
+		cell = Gtk.CellRendererText()
+		self.pack_start(cell, True)
+		self.add_attribute(cell, "text", 0)
+		if self.selected:
+			self.select_active_item(self.selected)
+
+	def _on_combo_changed(self,combo):
+		debug()
+		tree_iter = combo.get_active_iter()
+		if tree_iter is not None:
+			model = combo.get_model()
+			text = model[tree_iter][0]
+			self.active_index = self.items.index(text)
+			if callable(self.on_change):
+				self.on_change(text)
+
+	def select_active_item(self,text):
+		''' Set the active selection in the combobox to the item with text '''
+		i = self.items.index(text)
+		self.active_index = i
+		self.set_active(i)
+
+	def set_value(self,text,newitems=None):
+		if newitems:
+			self.items = newitems
+			liststore = Gtk.ListStore(str)
+			for item in newitems:
+				liststore.append([item])
+			self.set_model(liststore)
+		self.select_active_item(text)
+
+	def get_value(self):
+		''' get current active item '''
+		return self.items[self.active_index]
+
+	def get_text(self):
+		''' get current active item '''
+		return self.items[self.active_index]
+
