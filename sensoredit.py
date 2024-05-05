@@ -1,5 +1,12 @@
 '''
 Module to edit sensor definitons
+
+From this module a Gtk Window is created. The top portion of the window 
+contains fields for name host, sensor, and icon. 
+The bottom portion contains the ChartConfigPane (see chartconf.py)
+the ok and cancel buttons are handled by ChartConfigPane, which hands us back
+the chart configuration object. from there we pull in the other data and callback
+to the parent. 
 '''
 import os
 import gi

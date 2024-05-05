@@ -294,11 +294,11 @@
                 "legend_color": "#9a9996",
                 "line_color": "#4cd406",
                 "line_width": 4.0,
-                "min_value": 70.0,
-                "max_value": 80.0,
+                "min_value": 65.0,
+                "max_value": 75.0,
                 "pos": [
-                    1412,
-                    474
+                    1342,
+                    502
                 ],
                 "units": {
                     "humidity": {
@@ -440,8 +440,8 @@
                 "min_value": 0.0,
                 "max_value": 50.0,
                 "pos": [
-                    913,
-                    59
+                    919,
+                    53
                 ],
                 "units": {
                     "usage": {
@@ -622,48 +622,6 @@
                 }
             }
         },
-        "Room - Nicci": {
-            "host": "pi4",
-            "sensor": "aggregate",
-            "active": false,
-            "pos": [
-                504,
-                900
-            ],
-            "icon": "icons/aggregate.png",
-            "chart": {
-                "active": false,
-                "background_color": "#3f1372",
-                "key": "temp",
-                "interval": 2000,
-                "legend_color": "#e5a50a",
-                "line_color": "#ffffff",
-                "line_width": 2.0,
-                "min_value": 70.0,
-                "max_value": 80.0,
-                "pos": [
-                    1061,
-                    383
-                ],
-                "units": {
-                    "humidity": {
-                        "text": "%",
-                        "digits": 1
-                    },
-                    "tempc": {
-                        "text": "\u00b0C",
-                        "digits": 2
-                    },
-                    "temp": {
-                        "text": "\u00b0F",
-                        "digits": 2
-                    },
-                    "pressure": {
-                        "text": "mbars"
-                    }
-                }
-            }
-        },
         "Sensor - bmp280(1)": {
             "host": "pi4",
             "sensor": "bmp280",
@@ -725,6 +683,45 @@
                 "pos": [
                     88,
                     429
+                ],
+                "units": {
+                    "humidity": {
+                        "text": "%",
+                        "digits": 1
+                    },
+                    "tempc": {
+                        "text": "\u00b0C",
+                        "digits": 2
+                    },
+                    "temp": {
+                        "text": "\u00b0F",
+                        "digits": 2
+                    }
+                }
+            }
+        },
+        "Room - Nicci": {
+            "host": "pi4",
+            "sensor": "aggregate",
+            "active": false,
+            "pos": [
+                504,
+                900
+            ],
+            "icon": "icons/aggregate.png",
+            "chart": {
+                "active": true,
+                "background_color": "#3f1372",
+                "key": "temp",
+                "interval": 2000,
+                "legend_color": "#e5a50a",
+                "line_color": "#ffffff",
+                "line_width": 3.0,
+                "min_value": 72.0,
+                "max_value": 76.0,
+                "pos": [
+                    566,
+                    538
                 ],
                 "units": {
                     "humidity": {

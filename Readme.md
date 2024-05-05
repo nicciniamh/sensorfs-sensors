@@ -42,7 +42,8 @@ The data source is from network mounted filesystems. On macOS the path used is ~
 
 
 ## Bugs
-Probablt many. The more annoying one is why the chart windows don't restore to their original position. 
+
+There's a bunch. A lot of errors are silently ignored. The chartconfigpane is not loading with the correct min/max values. 
 
 # Intellectual Property
 I have glomed some icons from the net - I do not mean to rip anyone off and I'm not making money from this. (I'm retired with a disabilty)
