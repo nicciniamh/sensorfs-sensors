@@ -8,23 +8,38 @@ from dflib.debug import debug
 import iconimages
 
 class IconWindow(Gtk.ScrolledWindow):
+	''' 
+	Create a window with a Gtk.IconBox with callback and signal handling. 
+	'''
 	def __init__(self, **kwargs):
 		Gtk.ScrolledWindow.__init__(self)
 		self.selected_x = self.selected_y = 0
 		self.icon_dict = None
+		''' controls the layout '''
 		self.activate_callback = None
+		''' callback to use when item is activated '''
 		self.menu_callback = None
+		''' callback to use when item's menu is activated '''
 		self.context_menu = True
+		''' if set a context menu is used'''
 		self.icon_menu = True
+		''' if set an icon context menu is used '''
 		self.info_menu = False
+		''' if set an info menu item is used '''
 		self.add_item_callback = False
+		''' callback for add item '''
 		self.pixmap = {}
+		''' images to use for icons '''
 		self.sort_dir = Gtk.SortType.ASCENDING
+		''' sorting direction '''
 		self.sort_column = 1
+		''' sorting column '''
 		self.activate_on_single_click = False
+		''' if true item activates on single click '''
 		self.active_windows = None
 		self.active_charts = None
 		self.config = None
+		''' program base config '''
 		for k, v in kwargs.items():
 			if k in [   'icon_dict', 'context_menu',
 						'activate_callback', 'menu_callback', 'add_item_callback',
@@ -38,7 +53,9 @@ class IconWindow(Gtk.ScrolledWindow):
 		if self.info_menu and not callable(self.info_menu):
 			raise AttributeError('callback for info_menu must be callable')
 		self.icon_store = Gtk.ListStore(GdkPixbuf.Pixbuf, str, str)
+		''' Gtk.ListStore for the icons and labels '''
 		self.icon_view = Gtk.IconView(model=self.icon_store)
+		''' Gtk.iconView '''
 		self.icon_view.set_pixbuf_column(0)
 		self.icon_view.set_text_column(1)
 		if self.activate_on_single_click:
@@ -60,14 +77,13 @@ class IconWindow(Gtk.ScrolledWindow):
 		self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 		self.add(self.icon_view)
 		self.create_icons()
-		#self.context_menu = self.create_scrolled_window_context_menu()
-
-		self.show_all()  # Ensure the window is shown initially
-
-		# Connect button-press-event to scrolled window
+		self.context_menu = self.create_scrolled_window_context_menu()
+		first_path = Gtk.TreePath.new_first() # These two lines select the first 
+		self.icon_view.select_path(first_path) # icon in the iconview
 		self.show_all()
-
+			
 	def get_selected_item(self):
+		''' get current selected item '''
 		path = self.icon_view.get_selected_items()
 		if path:
 			item = self.icon_store[path][1]
@@ -76,6 +92,7 @@ class IconWindow(Gtk.ScrolledWindow):
 
 
 	def rename_icon(self,old,new):
+		''' rename an icon '''
 		if old in self.icon_dict:
 			tmp = self.icon_dict[old]
 			self.icon_dict[old] = None
@@ -96,6 +113,7 @@ class IconWindow(Gtk.ScrolledWindow):
 		self.icon_store.emit('row-changed',tree_path, iter)
 
 	def activate_icon(self,name,active):
+		''' activate icon by using an overlaid image to show activity '''
 		index = self._get_icon_store_by_name(name)
 		if type(index) is int:
 			row = self.icon_store[index]
@@ -107,8 +125,8 @@ class IconWindow(Gtk.ScrolledWindow):
 			debug('bad index',type(index),index)
 	
 	def deactivate_icon(self,name,active):
+		''' remove overlaid image to indicate activity done '''
 		self.activate_icon(name,active)
-		return
 		index = self._get_icon_store_by_name(name)
 		if type(index) is int:
 			row = self.icon_store[index]
@@ -118,12 +136,14 @@ class IconWindow(Gtk.ScrolledWindow):
 			self._signal_row_change(index)
 
 	def update_icon(self,old_name, new_name, icon_name):
+		''' change icon's image '''
 		if old_name in self.icon_dict:
 			del self.icon_dict[old_name]
 		self.icon_dict[new_name] = {'name': new_name, 'icon': icon_name}
 		self.create_icons()
 	
 	def delete_icon(self,item):
+		''' delete icon - this is used when the maain code deletes a sensor '''
 		if item in self.icon_dict:
 			del self.icon_dict[item]
 			self.icon_store.clear()
@@ -133,10 +153,12 @@ class IconWindow(Gtk.ScrolledWindow):
 			debug(f"no {item} in {self.icon_dict}")
 
 	def add_icon(self,icon,item):
+		''' add icon - this is used when the main code adds a sensor '''
 		self.icon_dict[item] = {'name': item, 'icon': icon}
 		self.create_icons()
 
 	def create_icons(self):
+		''' Create the icons from the icon_dict '''
 		self.icon_store.clear()
 		for key, value in self.icon_dict.items():
 			iaipath = value['icon']
@@ -164,6 +186,7 @@ class IconWindow(Gtk.ScrolledWindow):
 				self.icon_dict[key]['menu'] = self.create_icon_context_menu(key)
 
 	def on_icon_button_press(self, widget, event):
+		''' when icon is clicked  call back to main code '''
 		if event.button == Gdk.BUTTON_SECONDARY:
 			path = self.icon_view.get_path_at_pos(int(event.x), int(event.y))
 			if path and self.icon_menu:
@@ -196,28 +219,6 @@ class IconWindow(Gtk.ScrolledWindow):
 		sort_type_item.connect("activate", self.sort_by_type)
 
 		return sort_item, sort_submenu
-
-	def xcreate_scrolled_window_context_menu(self):
-		menu = Gtk.Menu()
-		sort_item, sort_submenu = self._sort_menu()
-
-		add_item = Gtk.MenuItem(label="New Sensor")
-		add_item.connect('activate', self.add_item_activate)
-		menu.append(add_item)
-		menu.append(sort_item)
-
-		sort_dir_item = Gtk.MenuItem('Sort Direction')
-		sort_dir_submenu = Gtk.Menu()
-		sort_dir_asc_item = Gtk.MenuItem(label="Ascending")
-		sort_dir_dsc_item = Gtk.MenuItem(label="Descending")
-		sort_dir_item.set_submenu(sort_dir_submenu)
-		sort_dir_submenu.append(sort_dir_asc_item)
-		sort_dir_submenu.append(sort_dir_dsc_item)
-		sort_dir_asc_item.connect("activate", self._set_sort_dir, Gtk.SortType.ASCENDING)
-		sort_dir_dsc_item.connect("activate", self._set_sort_dir, Gtk.SortType.DESCENDING)
-		menu.append(sort_dir_item)
-
-		return menu
 
 	def create_scrolled_window_context_menu(self):
 		menu = Gtk.Menu()

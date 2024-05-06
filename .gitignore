@@ -2,6 +2,7 @@ __pycache__/
 backup/
 build/
 dist/
+docs/
 icons.iconset
 sensor.icns
 .DS_Store

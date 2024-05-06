@@ -1,15 +1,5 @@
 '''
-Some widgets I made :) 
-
-Included are:
-	MessageBox - A Gtk.Window derived message box
-	ListBox - A simpler interface to a Gtk.ListBox
-	Toggle - A labeled toggle button inside a Gtk.Box
-	LabeledEntry - A labeled and Gtk.Entry field in a Gtk.Box
-	Button - a button class with a convenient css handler
-	yesno - a simple Gtk.Dialog function to ask a yesno question 
-	and return the result
-	MenuBar - a MenuBar that builds menus from a dictionary
+Some widgets I made that simplify my coding
 '''	
 
 
@@ -22,6 +12,7 @@ from gi.repository import Gtk, Gdk, Pango, GLib, GdkPixbuf, GObject
 from dflib.debug import debug, dpprint
 
 def yesno(parent,message):
+	''' Ask a yes or no question return the answer '''
 	message = message.split('\n')
 	title = message[0]
 	message = '\n'.join(message[1:])
@@ -101,6 +92,7 @@ class FixedSpinButton(Gtk.Box):
 		self._update_text()
 
 	def on_entry_changed(self,widget,*args):
+		''' handle entry changed event and callback to parent '''
 		v = widget.get_text()
 		if v:
 			v = re.sub('[^0-9]','',v)

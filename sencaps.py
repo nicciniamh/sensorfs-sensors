@@ -1,4 +1,7 @@
 class SensorCapabilities:
+	'''
+	Define sensor capabilities based on sensor device in sensor_name
+	'''
 	def __init__(self,sensor_name):
 		self._dsym = '\xb0'
 		self._cpu_info = {
@@ -87,6 +90,7 @@ class SensorCapabilities:
 		self.cap = self._sen_caps[sensor_name]
 
 	def get_cap(self):
+		''' Return the capabilities dict '''
 		return self.cap
 
 	def get_cap_name(self,name):
