@@ -34,7 +34,7 @@ import chartconf
 import sencaps
 import cfg
 
-program_version="3.0.0 (28 April 2024)"
+program_version="3.0.1b (05 May 2024)"
 pid_file = '/tmp/.sensors'
 
 class Sensors(Gtk.ApplicationWindow):

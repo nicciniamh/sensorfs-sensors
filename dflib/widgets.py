@@ -812,6 +812,7 @@ class SimpleCombo(Gtk.ComboBox):
 		self.on_change = kwargs.get('on_change')
 		self.selected = kwargs.get('selected')
 		self.items = items
+		self.deferred = not callable(self.on_change)
 		liststore = Gtk.ListStore(str)
 		Gtk.ComboBox.__init__(self,model=liststore)
 		for item in items:
@@ -827,6 +828,13 @@ class SimpleCombo(Gtk.ComboBox):
 		if self.selected:
 			self.select_active_item(self.selected)
 
+	def connect_deferred(self,callback):
+		self.on_change = callback
+		self.deferred = False
+	
+	def defer(self,flag=True):
+		self.deferred = flag
+
 	def _on_combo_changed(self,combo):
 		debug()
 		tree_iter = combo.get_active_iter()
@@ -834,8 +842,10 @@ class SimpleCombo(Gtk.ComboBox):
 			model = combo.get_model()
 			text = model[tree_iter][0]
 			self.active_index = self.items.index(text)
-			if callable(self.on_change):
+			if not self.deferred:
 				self.on_change(text)
+			else:
+				debug("Callback deferred")
 
 	def select_active_item(self,text):
 		''' Set the active selection in the combobox to the item with text '''

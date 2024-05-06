@@ -106,6 +106,7 @@ class ChartConfigPane(Gtk.Box):
 
 		self.min_value = self.cobj['min_value']
 		self.max_value = self.cobj['max_value']
+		debug(f"loading min/max from cobj.{self.min_value}/{self.max_value}")
 
 		if not 'units' in self.cobj:
 			debug("using units from sencap")
@@ -119,32 +120,37 @@ class ChartConfigPane(Gtk.Box):
 		self.scale.set_value(self.cobj['line_width'])  # Set the initial value
 		self.keysel.set_value(self.key)
 		self.units_entry.set_text(self.cobj['units'][self.key]['text'])
-		GLib.timeout_add(100,self.set_range_and_units,False)
-		self.set_range_and_units()
+		self.reconfigure(self.sensor_type,self.cobj)
+		self.keysel.connect_deferred(self.on_key_select) ## This is to prevent signals during setup
 
-	def reconfigure(self,sendev,corb):
+
+	def reconfigure(self,sendev,cobj):
 		'''
 		reconfigure the pane by taking a new sensor in sendev and a new chart object
 		'''
-		self.sensor_type = sendev
-		self.corb = copy.deepcopy(corb)
-		self.sencap = sencaps.SensorCapabilities(sendev).get_cap()
-		keys = list(self.sencap['units'].keys())
-		if not self.key or not self.key in keys:
-			self.key = keys[0]
+		if self.sensor_type != sendev or cobj['key'] != self.key:
+			self.keysel.defer()
+			if self.sensor_type != sendev:
+				self.sensor_type = sendev
+				self.sencap = sencaps.SensorCapabilities(sendev).get_cap()
+				keys = list(self.sencap['units'].keys())
+				self.cobj = copy.deepcopy(cobj)
+				self.key = keys[0]
+				self.kavail = keys
+			else:
+				self.key = cobj['key']
+				self.units = self.cobj['units'] = self.sencap['units']
+				self.keysel.set_value(self.key,keys)
 
-		self.units = self.cobj['units'] = self.sencap['units']
-		
-		self.keysel.set_value(self.key,keys)
-		self.min_value = self.cobj['min_value'] = self.sencap['ranges'][self.key][0]
-		self.max_value = self.cobj['max_value'] = self.sencap['ranges'][self.key][1]
+			self.min_value = self.cobj['min_value'] = self.sencap['ranges'][self.key][0]
+			self.max_value = self.cobj['max_value'] = self.sencap['ranges'][self.key][1]
 
 		debug('min/max',self.min_value,self.max_value)
-		self.kavail = keys
+
 		self.scale.set_value(self.cobj['line_width'])  # Set the initial value
 		self.units_entry.set_text(self.cobj['units'][self.key]['text'])
-		
-		GLib.timeout_add(100,self.set_range_and_units,False)
+		self.set_range_and_units()
+		self.keysel.defer(False)
 
 	def set_range_and_units(self,rc=True):
 		'''
@@ -232,7 +238,7 @@ class ChartConfigPane(Gtk.Box):
 		bbox.pack_start(Gtk.Label(label=' '),True,True,0)
 		bbox.pack_start(ok_button,True,True,0)
 		bbox.pack_start(cancel_button,True,True,0)
-		self.keysel = widgets.SimpleCombo(self.kavail,on_change=self.on_key_select)
+		self.keysel = widgets.SimpleCombo(self.kavail,on_change=None)
 		#self.keysel = widgets.StringSpinButton(self.kavail,self.on_key_select)
 		self.keysel.set_tooltip_text('Select item to chart')
 		keybox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -259,9 +265,10 @@ class ChartConfigPane(Gtk.Box):
 		*sigh*
 		'''
 		debug(key)
+		if key != self.key: # Do not set ranges when the key is the same. This can happen during initilaization
+			self.min_value = self.cobj['min_value'] = self.sencap['ranges'][key][0]
+			self.max_value = self.cobj['max_value'] = self.sencap['ranges'][key][1]
 		self.key = self.cobj['key'] = key
-		self.min_value = self.cobj['min_value'] = self.sencap['ranges'][self.key][0]
-		self.max_value = self.cobj['max_value'] = self.sencap['ranges'][self.key][1]
 		self.set_range_and_units()
 
 

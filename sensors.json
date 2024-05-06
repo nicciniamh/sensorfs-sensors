@@ -297,8 +297,8 @@
                 "min_value": 65.0,
                 "max_value": 75.0,
                 "pos": [
-                    1342,
-                    502
+                    1419,
+                    464
                 ],
                 "units": {
                     "humidity": {
@@ -500,8 +500,8 @@
                 "legend_color": "#A0A0A0",
                 "line_color": "#0000ff",
                 "line_width": 3,
-                "min_value": 0,
-                "max_value": 0,
+                "min_value": 70,
+                "max_value": 80,
                 "pos": [
                     98,
                     645
@@ -639,8 +639,8 @@
                 "legend_color": "#63452c",
                 "line_color": "#ffa348",
                 "line_width": 2.0,
-                "min_value": 50.0,
-                "max_value": 95.0,
+                "min_value": 70.0,
+                "max_value": 75.0,
                 "pos": [
                     1424,
                     779
@@ -713,15 +713,15 @@
                 "active": true,
                 "background_color": "#3f1372",
                 "key": "temp",
-                "interval": 2000,
+                "interval": 302000,
                 "legend_color": "#e5a50a",
                 "line_color": "#ffffff",
                 "line_width": 3.0,
                 "min_value": 72.0,
                 "max_value": 76.0,
                 "pos": [
-                    566,
-                    538
+                    914,
+                    467
                 ],
                 "units": {
                     "humidity": {
