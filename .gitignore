@@ -8,3 +8,4 @@ sensor.icns
 sensors.code-workspace
 sensors.json
 *test.py
+*.html

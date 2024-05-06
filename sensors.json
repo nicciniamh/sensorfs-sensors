@@ -42,8 +42,8 @@
                 "min_value": 0.0,
                 "max_value": 100.0,
                 "pos": [
-                    1410,
-                    57
+                    1057,
+                    64
                 ],
                 "units": {
                     "usage": {
@@ -297,8 +297,8 @@
                 "min_value": 65.0,
                 "max_value": 75.0,
                 "pos": [
-                    1419,
-                    464
+                    1206,
+                    507
                 ],
                 "units": {
                     "humidity": {
@@ -440,8 +440,8 @@
                 "min_value": 0.0,
                 "max_value": 50.0,
                 "pos": [
-                    919,
-                    53
+                    611,
+                    532
                 ],
                 "units": {
                     "usage": {
@@ -720,8 +720,8 @@
                 "min_value": 72.0,
                 "max_value": 76.0,
                 "pos": [
-                    914,
-                    467
+                    64,
+                    544
                 ],
                 "units": {
                     "humidity": {
